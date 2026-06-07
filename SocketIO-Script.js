@@ -54,6 +54,52 @@ script.remove();
         unsafeWindow._MM_sendRaw(encoded);
     };
 
+    const AudioFX = {
+    ctx: null,
+    init() {
+        if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    },
+    playClick() {
+        this.init();
+        const ctx = this.ctx;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(600, ctx.currentTime); // Start high
+        osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.08); // Drop fast
+        
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+        
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.08);
+    },
+    playToggle(isOn) {
+        this.init();
+        const ctx = this.ctx;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        
+        osc.type = 'triangle';
+        const startFreq = isOn ? 400 : 300;
+        const endFreq = isOn ? 800 : 150; // High beep for ON, low bloop for OFF
+        
+        osc.frequency.setValueAtTime(startFreq, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(endFreq, ctx.currentTime + 0.12);
+        
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
+        
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.12);
+    }
+};
+
     function initMenu() {
         const ModMenu = (() => {
             // Replaced static hex with a CSS variable (--mm-theme)
@@ -98,6 +144,136 @@ script.remove();
                 .mm-cb-wrap input:checked+.mm-cb-box{background:var(--mm-theme);border-color:var(--mm-theme);color:#fff}
                 .mm-cb-box::after{content:'';font-size:11px}
                 .mm-cb-wrap input:checked+.mm-cb-box::after{content:'✓'}
+                .mm-btn-el {
+                    padding:7px 10px; background:#222; border:1px solid #444; color:#fff; font-size:12px;
+                    font-weight:bold; cursor:pointer; border-radius:4px; width:100%; text-align:left;
+                    margin-bottom:6px; display:block;
+                    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+                /* Micro-pop scale animation when hovering over buttons */
+                .mm-btn-el:hover {
+                    background:#2a2a2a;
+                    transform: scale(1.02);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                }
+                /* Click shrink animation */
+                .mm-btn-el:active {
+                    transform: scale(0.97);
+                }
+
+                /* Smooth checkmark animation for the checkbox */
+                .mm-cb-box {
+                    width:16px; height:16px; background:#111; border:1px solid #444; border-radius:3px;
+                    display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:11px; color:#fff;
+                    transition: all 0.2s ease;
+                }
+                .mm-cb-wrap:hover .mm-cb-box {
+                    border-color: var(--mm-theme);
+                    transform: scale(1.08);
+                }
+                .mm-cb-wrap input:checked + .mm-cb-box {
+                    background: var(--mm-theme);
+                    border-color: var(--mm-theme);
+                    animation: cb-pop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                }
+
+                /* Keyframes for a bouncy checkmark pop */
+                @keyframes cb-pop {
+                    0% { transform: scale(0.6); }
+                    100% { transform: scale(1); }
+                }
+                    .mm-input-el {
+    background: #111;
+    border: 1px solid #333;
+    color: #fff;
+    font-size: 12px;
+    font-weight: bold;
+    padding: 6px 10px;
+    border-radius: 4px;
+    width: 100%;
+    outline: none;
+    font-family: Arial;
+    margin-bottom: 6px;
+    text-align: center; /* Centers the Room ID number so it looks clean */
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); /* Deepens the input box */
+}
+
+/* Micro-interaction when you hover over the input box */
+.mm-input-el:hover {
+    border-color: #444;
+    background: #141414;
+}
+
+/* Dynamic theme glow when you click inside to type */
+.mm-input-el:focus {
+    border-color: var(--mm-theme);
+    background: #161616;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.8), 0 0 8px var(--mm-theme);
+}
+    /* Add a smooth cubic-bezier transition for sizing updates */
+.mm-box {
+    position: fixed; background: #1a1a1a; border: 1px solid #333; border-radius: 6px;
+    min-width: 280px; z-index: 999999; box-shadow: 0 8px 32px rgba(0,0,0,.7); user-select: none;
+    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    max-height: 800px; /* High safety cap */
+    overflow: hidden; /* Stops content from spilling during height transitions */
+}
+
+/* Update the body segments to handle smooth fading alongside the scaling */
+.mm-body {
+    padding: 12px;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    display: none;
+    font-family: Arial;
+}
+
+/* When active, trigger a sleek fade-in up-shift macro */
+.mm-body.active {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+}
+    .mm-footer {
+    background: #111;
+    border-top: 1px solid #2a2a2a;
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: Arial, sans-serif;
+}
+.mm-status-label {
+    font-size: 10px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: bold;
+}
+.mm-status-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.mm-status-text {
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 0.3px;
+}
+.mm-status-text.connected { color: #00ff88; text-shadow: 0 0 6px rgba(0,255,136,0.3); }
+.mm-status-text.disconnected { color: #ff4444; text-shadow: 0 0 6px rgba(255,68,68,0.3); }
+
+/* Small glowing status indicator dot */
+.mm-status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+}
+.mm-status-dot.connected { background: #00ff88; box-shadow: 0 0 6px #00ff88; }
+.mm-status-dot.disconnected { background: #ff4444; box-shadow: 0 0 6px #ff4444; }
             `;
 
             function inject() {
@@ -155,56 +331,219 @@ script.remove();
                 inner.appendChild(tabContent);
                 box.appendChild(header);
                 box.appendChild(inner);
+
+                const footer = document.createElement('div');
+                footer.className = 'mm-footer';
+                footer.innerHTML = `
+                    <span class="mm-status-label">Terminal Status</span>
+                    <div class="mm-status-wrapper">
+                        <span id="mm-dot" class="mm-status-dot disconnected"></span>
+                        <span id="mm-status" class="mm-status-text disconnected">NOT INJECTED</span>
+                    </div>
+                `;
+                box.appendChild(footer); // Appended directly to box so it's globally static
                 document.body.appendChild(box);
 
-                let drag = false, ox = 0, oy = 0;
-                header.addEventListener('mousedown', e => {
-                    drag = true;
-                    ox = e.clientX - box.getBoundingClientRect().left;
-                    oy = e.clientY - box.getBoundingClientRect().top;
-                    box.style.right = 'auto';
-                    e.preventDefault();
-                });
-                document.addEventListener('mousemove', e => {
-                    if (!drag) return;
-                    const finalX = (e.clientX - ox) + 'px';
-                    const finalY = (e.clientY - oy) + 'px';
-                    box.style.left = finalX;
-                    box.style.top  = finalY;
-                    
-                    // Save window position on the fly
-                    Config.set('menu_x', finalX);
-                    Config.set('menu_y', finalY);
-                });
-                document.addEventListener('mouseup', () => drag = false);
+// --- Advanced Kinetic Dragging & Tilt Engine ---
+let drag = false;
+let ox = 0, oy = 0;             // Mouse offset relative to window top-left
+let mouseX = 0, mouseY = 0;       // Current global mouse coordinates
+let currentX = 0, currentY = 0;   // Current interpolated window coordinates
+let targetX = 0, targetY = 0;     // Target destination coordinates
+
+// Velocity & Inertia variables
+let vx = 0, vy = 0;               // Current velocity vectors
+let lastMouseX = 0, lastMouseY = 0; // Tracking previous frame for speed calc
+const lerpSpeed = 0.15;           // Smooth tracking weight (0.1 - 0.2 is best)
+const friction = 0.92;            // Slide duration after release (lower = stops faster)
+
+// Parse initial coordinates out of your box styles safely
+const rect = box.getBoundingClientRect();
+currentX = targetX = rect.left;
+currentY = targetY = rect.top;
+
+header.addEventListener('mousedown', e => {
+    drag = true;
+    ox = e.clientX - box.getBoundingClientRect().left;
+    oy = e.clientY - box.getBoundingClientRect().top;
+    
+    mouseX = lastMouseX = e.clientX;
+    mouseY = lastMouseY = e.clientY;
+    targetX = mouseX - ox;
+    targetY = mouseY - oy;
+    
+    // Kill any active slide velocity immediately when grabbed again
+    vx = 0;
+    vy = 0;
+    
+    box.style.right = 'auto';
+    e.preventDefault();
+});
+
+document.addEventListener('mousemove', e => {
+    if (!drag) return;
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+    
+    targetX = mouseX - ox;
+    targetY = mouseY - oy;
+});
+
+document.addEventListener('mouseup', () => {
+    if (drag) {
+        drag = false;
+    }
+});
+
+// --- Physics Engine Variables (Add this right above updatePhysicsLoop) ---
+let currentTilt = 0; // Tracks the interpolated smooth rotation value
+
+function updatePhysicsLoop() {
+    let targetTilt = 0;
+
+    if (drag) {
+        // 1. Calculate how fast the mouse moved since the last frame
+        const currentMouseX = mouseX;
+        vx = currentMouseX - lastMouseX;
+        vy = mouseY - lastMouseY;
+        
+        lastMouseX = currentMouseX;
+        lastMouseY = mouseY;
+
+        // 2. Standard smooth trailing tracking while mouse is held
+        currentX += (targetX - currentX) * lerpSpeed;
+        currentY += (targetY - currentY) * lerpSpeed;
+        
+        // Target tilt is based on raw drag speed (capped at 12 degrees max)
+        targetTilt = Math.max(-12, Math.min(12, vx * 0.4));
+    } else {
+        // 3. INERTIA: If button is released, keep sliding using leftover velocity
+        vx *= friction;
+        vy *= friction;
+        
+        if (Math.abs(vx) < 0.05) vx = 0;
+        if (Math.abs(vy) < 0.05) vy = 0;
+        
+        currentX += vx;
+        currentY += vy;
+        
+        // Target tilt bleeds out proportionally to sliding speed
+        targetTilt = Math.max(-12, Math.min(12, vx * 0.4));
+
+        if (vx === 0 && vy === 0 && box.style.left !== currentX + 'px') {
+            Config.set('menu_x', box.style.left);
+            Config.set('menu_y', box.style.top);
+        }
+    }
+
+    // --- THE FIX: Smooth out the rotation angle separately ---
+    // 0.10 gives it a slightly heavier, dampening lag so it transitions like butter
+    currentTilt += (targetTilt - currentTilt) * 0.10; 
+
+    // 4. Render calculations directly onto the DOM element using raw hardware transforms
+    box.style.left = currentX + 'px';
+    box.style.top  = currentY + 'px';
+    
+    // Apply the newly interpolated, damp-filtered tilt value
+    box.style.transform = `rotate(${currentTilt}deg)`;
+
+    // --- Simplified Status Polling ---
+    const dotEl = document.getElementById('mm-dot');
+    const statusEl = document.getElementById('mm-status');
+    
+    if (dotEl && statusEl) {
+        // Checks strictly if the array exists on unsafeWindow AND has at least 1 socket found
+        const hasSockets = !!(unsafeWindow._MM_SOCKETS && unsafeWindow._MM_SOCKETS.length > 0);
+        
+        if (hasSockets) {
+            if (statusEl.textContent !== "INJECTED") {
+                statusEl.textContent = "INJECTED";
+                statusEl.className = "mm-status-text connected";
+                dotEl.className = "mm-status-dot connected";
+            }
+        } else {
+            if (statusEl.textContent !== "NOT INJECTED") {
+                statusEl.textContent = "NOT INJECTED";
+                statusEl.className = "mm-status-text disconnected";
+                dotEl.className = "mm-status-dot disconnected";
+            }
+        }
+    }
+    requestAnimationFrame(updatePhysicsLoop);
+}
+
+// Fire up the animation engine loop immediately
+requestAnimationFrame(updatePhysicsLoop);
 
                 const tabs = [];
 
                 function addTab(name) {
-                    const tabEl = document.createElement('div');
-                    tabEl.className = 'mm-tab';
-                    tabEl.textContent = name;
+        const tabEl = document.createElement('div');
+        tabEl.className = 'mm-tab';
+        tabEl.textContent = name;
 
-                    const bodyEl = document.createElement('div');
-                    bodyEl.className = 'mm-body';
+        const bodyEl = document.createElement('div');
+        bodyEl.className = 'mm-body';
 
-                    tabEl.onclick = () => {
-                        tabs.forEach(t => { t.el.classList.remove('active'); t.body.classList.remove('active'); });
-                        tabEl.classList.add('active');
-                        bodyEl.classList.add('active');
-                    };
+        // 🚨 REPLACE YOUR OLD tabEl.onclick WITH THIS JUICED VERSION HERE:
+        tabEl.onclick = () => {
+    // 1. Capture the starting height before doing anything
+    const oldHeight = box.getBoundingClientRect().height;
+    box.style.maxHeight = oldHeight + 'px';
 
-                    tabBar.appendChild(tabEl);
-                    tabContent.appendChild(bodyEl);
-                    tabs.push({ el: tabEl, body: bodyEl });
+    // 2. Temporarily let the new body render, but keep old ones active for calculation
+    const currentActiveBody = [...tabContent.children].find(b => b.classList.contains('active'));
+    
+    tabs.forEach(t => t.el.classList.remove('active'));
+    tabEl.classList.add('active');
+    
+    // Force target body to display block so we can measure it, but hide opacity
+    bodyEl.style.display = 'block';
+    bodyEl.style.position = 'absolute'; // Pop it out of flow so it doesn't bloat the screen
+    bodyEl.style.visibility = 'hidden';
 
-                    if (tabs.length === 1) { tabEl.classList.add('active'); bodyEl.classList.add('active'); }
+    // 3. Force reflow to calculate what the absolute new target height WILL be
+    box.style.maxHeight = 'none';
+    
+    // We calculate the header + tabs + the new body's height manually
+    const headerHeight = header.getBoundingClientRect().height;
+    const tabsBarHeight = tabBar.getBoundingClientRect().height;
+    const padding = 24; // padding-top + padding-bottom of mm-body (12px + 12px)
+    const newBodyHeight = bodyEl.scrollHeight + padding;
+    const targetHeight = headerHeight + tabsBarHeight + newBodyHeight;
 
-                    return Tab(bodyEl);
-                }
+    // 4. Clean up the temporary measuring styles
+    bodyEl.style.display = '';
+    bodyEl.style.position = '';
+    bodyEl.style.visibility = '';
 
-                return { addTab };
-            }
+    // 5. Now safely execute the real class swap
+    tabs.forEach(t => t.body.classList.remove('active'));
+    bodyEl.classList.add('active');
+
+    // 6. Snap back to old height instantly, then transition to the smaller target height
+    box.style.maxHeight = oldHeight + 'px';
+    void box.offsetHeight; // Force layout engine reflow
+    
+    box.style.maxHeight = targetHeight + 'px';
+
+    // 7. Wipe inline max-height after transition finishes so dragging remains unbugged
+    setTimeout(() => {
+        box.style.maxHeight = '';
+    }, 300);
+};
+
+        tabBar.appendChild(tabEl);
+        tabContent.appendChild(bodyEl);
+        tabs.push({ el: tabEl, body: bodyEl });
+
+        if (tabs.length === 1) { tabEl.classList.add('active'); bodyEl.classList.add('active'); }
+
+        return Tab(bodyEl);
+    }
+
+    return { addTab };
+}
 
             function Tab(container) {
                 function section(title, subtitle) {
@@ -310,7 +649,7 @@ script.remove();
                 unsafeWindow.setTimeout(() => {
                     sendPacket('game_over', { coins: 1000 });
                 }, 5000);
-                console.log("Sent gameover with 100 coins");
+                console.log("Sent gameover with 1000 coins");
             });
 
         // --- INVENTORY TAB ---
