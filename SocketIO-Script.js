@@ -310,7 +310,7 @@ script.remove();
                 unsafeWindow.setTimeout(() => {
                     sendPacket('game_over', { coins: 1000 });
                 }, 5000);
-                console.log("Sent gameover with 1000 coins");
+                console.log("Sent gameover with 100 coins");
             });
 
         // --- INVENTORY TAB ---
