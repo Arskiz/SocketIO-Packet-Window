@@ -1,16 +1,3 @@
-// ==UserScript==
-// @name         CPLegacy Mod Menu (Juiced Edition)
-// @namespace    http://tampermonkey.net/
-// @version      2.5
-// @match        https://play.cplegacy.com/*
-// @run-at       document-start
-// @grant        GM_addStyle
-// @grant        GM_setValue
-// @grant        GM_getValue
-// @grant        unsafeWindow
-// @require      https://cdnjs.cloudflare.com/ajax/libs/msgpack-lite/0.1.26/msgpack.min.js
-// ==/UserScript==
-
 // Inject socket capture into real page context
 const script = document.createElement('script');
 script.textContent = `
