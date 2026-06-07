@@ -304,13 +304,13 @@ script.remove();
             });
 
         general.section("Economy")
-            .button("💸 Get 100 coins", "green", () => {
+            .button("💸 Get 1000 coins", "green", () => {
                 console.log("Joined room 901");
                 sendPacket('join_room', { room: 901, x: 100, y: 100 });
                 unsafeWindow.setTimeout(() => {
-                    sendPacket('game_over', { coins: 100 });
+                    sendPacket('game_over', { coins: 1000 });
                 }, 5000);
-                console.log("Sent gameover with 100 coins");
+                console.log("Sent gameover with 1000 coins");
             });
 
         // --- INVENTORY TAB ---
