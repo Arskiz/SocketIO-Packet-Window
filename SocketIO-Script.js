@@ -54,7 +54,7 @@
 
             osc.type = 'triangle';
             const startFreq = isOn ? 400 : 300;
-            const endFreq = isOn ? 800 : 150;
+            const endFreq = isOn ? 800 : 150; 
 
             osc.frequency.setValueAtTime(startFreq, ctx.currentTime);
             osc.frequency.exponentialRampToValueAtTime(endFreq, ctx.currentTime + 0.12);
@@ -72,215 +72,138 @@
     function initMenu() {
         const ModMenu = (() => {
             const style = `
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+
                 :root { 
-                    --mm-theme: ${Config.get('theme_color', '#ff2a2a')};
+                    --mm-theme: ${Config.get('theme_color', '#ff2a5f')};
                     --mm-title: ${Config.get('title_color', '#ffffff')};
-                    --mm-bg: rgba(15, 15, 20, 0.65);
+                    --mm-bg: rgba(12, 12, 14, 0.65);
+                    --mm-surface: rgba(255, 255, 255, 0.03);
                     --mm-border: rgba(255, 255, 255, 0.08);
-                    --mm-text: #e2e8f0;
-                    --mm-muted: #94a3b8;
-                    --mm-surface: rgba(255, 255, 255, 0.04);
-                    --mm-surface-hover: rgba(255, 255, 255, 0.08);
                 }
 
+                /* Absolute Cinema Glassmorphism Base */
                 .mm-box {
                     position: fixed;
-                    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+                    font-family: 'Inter', sans-serif;
                     background: var(--mm-bg) !important;
                     backdrop-filter: blur(24px) saturate(180%) !important;
                     -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
                     border: 1px solid var(--mm-border) !important;
                     border-radius: 16px;
-                    min-width: 300px;
+                    min-width: 320px;
                     z-index: 999999;
-                    box-shadow: 0 30px 60px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+                    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
                     user-select: none;
                     transition: max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1), width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
                     max-height: 850px;
                     overflow: hidden;
-                    color: var(--mm-text);
+                    display: flex;
+                    flex-direction: column;
                 }
 
+                /* Sleek Header */
                 .mm-header {
-                    background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 100%) !important;
+                    background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 100%) !important;
                     border-bottom: 1px solid var(--mm-border);
-                    padding: 14px 18px;
+                    padding: 12px 16px;
                     display: flex;
                     align-items: center;
                     cursor: grab;
                     gap: 10px;
                 }
                 .mm-header:active { cursor: grabbing; }
-
+                
                 .mm-title {
                     flex: 1;
                     color: var(--mm-title);
                     font-size: 14px;
-                    font-weight: 700;
-                    letter-spacing: 0.2px;
-                    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+                    font-weight: 800;
+                    letter-spacing: 0.5px;
+                    text-transform: uppercase;
+                    text-shadow: 0 0 10px rgba(255,255,255,0.2);
                 }
 
+                .mm-controls { display: flex; gap: 8px; }
+                
                 .mm-btn-close, .mm-btn-min {
                     width: 14px; height: 14px;
-                    border-radius: 50%;
-                    border: none;
-                    cursor: pointer;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: transparent;
+                    border-radius: 50%; border: none; cursor: pointer;
+                    display: flex; align-items: center; justify-content: center;
                     transition: all 0.2s ease;
-                    position: relative;
+                    opacity: 0.7;
                 }
-                .mm-btn-min { background: #f5a623; }
-                .mm-btn-close { background: #ff4757; }
-                
-                .mm-btn-close:hover, .mm-btn-min:hover {
-                    color: rgba(0,0,0,0.6);
-                    transform: scale(1.1);
-                }
-                .mm-btn-min::before { content: "−"; font-size: 12px; font-weight: 900; line-height: 0; }
-                .mm-btn-close::before { content: "×"; font-size: 12px; font-weight: 900; line-height: 0; }
+                .mm-btn-close { background: #ff4757; box-shadow: 0 0 8px rgba(255, 71, 87, 0.4); }
+                .mm-btn-min { background: #ffa502; box-shadow: 0 0 8px rgba(255, 165, 2, 0.4); }
+                .mm-btn-close:hover, .mm-btn-min:hover { opacity: 1; transform: scale(1.2); }
 
+                /* Pill-shaped modern tabs */
                 .mm-tabs {
                     display: flex;
-                    background: rgba(0,0,0,0.2);
-                    margin: 12px 14px;
-                    padding: 4px;
-                    border-radius: 10px;
-                    gap: 4px;
+                    padding: 12px 16px 0;
+                    gap: 8px;
+                    border-bottom: 1px solid transparent;
                 }
                 .mm-tab {
-                    flex: 1;
-                    text-align: center;
-                    padding: 8px 0;
+                    padding: 6px 14px;
                     font-size: 12px;
                     font-weight: 600;
-                    color: var(--mm-muted);
+                    color: #7a7a8c;
                     cursor: pointer;
-                    border-radius: 6px;
-                    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+                    background: transparent;
+                    border-radius: 20px;
+                    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
                 }
-                .mm-tab:hover { color: #fff; background: var(--mm-surface); }
+                .mm-tab:hover { color: #fff; background: rgba(255, 255, 255, 0.05); }
                 .mm-tab.active {
                     color: #fff;
-                    background: var(--mm-surface-hover);
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                    background: var(--mm-theme);
+                    box-shadow: 0 4px 15px var(--mm-theme);
+                    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
                 }
 
+                /* Smooth Body Segments */
                 .mm-body {
-                    padding: 0 16px 16px 16px;
+                    padding: 16px;
                     opacity: 0;
-                    transform: translateY(8px) scale(0.98);
-                    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+                    transform: translateY(10px);
+                    transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
                     display: none;
+                    flex: 1;
+                    overflow-y: auto;
                 }
                 .mm-body.active {
                     display: block;
                     opacity: 1;
-                    transform: translateY(0) scale(1);
+                    transform: translateY(0);
                 }
+                
+                /* Custom Webkit Scrollbar */
+                .mm-body::-webkit-scrollbar { width: 4px; }
+                .mm-body::-webkit-scrollbar-track { background: transparent; }
+                .mm-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+                .mm-body::-webkit-scrollbar-thumb:hover { background: var(--mm-theme); }
 
-                .mm-section {
-                    margin-bottom: 20px;
-                    background: rgba(0,0,0,0.15);
-                    padding: 14px;
-                    border-radius: 12px;
-                    border: 1px solid rgba(255,255,255,0.03);
-                }
+                /* Sections */
+                .mm-section { margin-bottom: 20px; }
                 .mm-section-title {
-                    font-size: 10px;
+                    font-size: 11px;
                     font-weight: 800;
                     color: var(--mm-theme);
                     text-transform: uppercase;
-                    letter-spacing: 1.2px;
-                    margin-bottom: 4px;
-                }
-                .mm-subtitle {
-                    font-size: 11px;
-                    color: var(--mm-muted);
-                    margin-bottom: 12px;
-                    font-weight: 500;
-                }
-
-                .mm-row {
+                    letter-spacing: 1.5px;
+                    margin-bottom: 10px;
                     display: flex;
                     align-items: center;
-                    justify-content: space-between;
-                    margin-bottom: 10px;
-                    gap: 12px;
+                    gap: 8px;
                 }
-                .mm-label {
-                    font-size: 13px;
-                    color: #f1f5f9;
-                    font-weight: 500;
-                    flex: 1;
+                .mm-section-title::after {
+                    content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--mm-theme), transparent);
+                    opacity: 0.3;
                 }
+                .mm-subtitle { font-size: 11px; color: #666; margin-bottom: 12px; margin-top: -6px; }
 
-                /* Beautiful Modern Toggles */
-                .mm-cb-wrap {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    cursor: pointer;
-                    margin-bottom: 10px;
-                    padding: 6px 0;
-                }
-                .mm-cb-wrap input { display: none; }
-                .mm-cb-box {
-                    width: 36px;
-                    height: 20px;
-                    background: #2a2a35;
-                    border-radius: 20px;
-                    position: relative;
-                    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-                    box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
-                    border: 1px solid rgba(255,255,255,0.05);
-                }
-                .mm-cb-box::after {
-                    content: '';
-                    position: absolute;
-                    top: 2px;
-                    left: 2px;
-                    width: 14px;
-                    height: 14px;
-                    background: #fff;
-                    border-radius: 50%;
-                    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-                    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-                }
-                .mm-cb-wrap input:checked + .mm-cb-box {
-                    background: var(--mm-theme);
-                    box-shadow: 0 0 12px var(--mm-theme), inset 0 2px 4px rgba(0,0,0,0.2);
-                }
-                .mm-cb-wrap input:checked + .mm-cb-box::after {
-                    transform: translateX(16px);
-                }
-
-                /* Sleek Inputs */
-                .mm-input-el {
-                    background: rgba(0,0,0,0.25) !important;
-                    border: 1px solid var(--mm-border) !important;
-                    color: #fff !important;
-                    font-size: 12px !important;
-                    font-weight: 600 !important;
-                    padding: 8px 12px !important;
-                    border-radius: 8px !important;
-                    outline: none !important;
-                    font-family: 'Inter', sans-serif !important;
-                    text-align: center !important;
-                    transition: all 0.2s ease !important;
-                    box-shadow: inset 0 2px 4px rgba(0,0,0,0.2) !important;
-                }
-                .mm-input-el:hover { border-color: rgba(255,255,255,0.15) !important; }
-                .mm-input-el:focus {
-                    border-color: var(--mm-theme) !important;
-                    background: rgba(0,0,0,0.4) !important;
-                    box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), 0 0 0 3px rgba(255,255,255,0.05) !important;
-                }
-
-                /* Sexy Buttons */
+                /* Neumorphic/Glass Buttons */
                 .mm-btn-el {
                     padding: 10px 14px;
                     background: var(--mm-surface);
@@ -291,150 +214,134 @@
                     cursor: pointer;
                     border-radius: 8px;
                     width: 100%;
-                    text-align: center;
-                    margin-bottom: 10px;
-                    display: block;
-                    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+                    text-align: left;
+                    margin-bottom: 8px;
                     position: relative;
                     overflow: hidden;
-                }
-                .mm-btn-el::before {
-                    content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-                    background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%);
-                    opacity: 0; transition: opacity 0.2s ease;
+                    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+                    backdrop-filter: blur(4px);
                 }
                 .mm-btn-el:hover {
-                    background: var(--mm-surface-hover);
-                    transform: translateY(-1px);
-                    box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+                    background: rgba(255, 255, 255, 0.08);
+                    border-color: var(--mm-theme);
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 20px rgba(0,0,0,0.4), 0 0 10px var(--mm-theme) inset;
                 }
-                .mm-btn-el:hover::before { opacity: 1; }
-                .mm-btn-el:active { transform: translateY(1px); }
+                .mm-btn-el:active { transform: translateY(1px) scale(0.98); }
+
+                /* Sexy inputs */
+                .mm-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 12px; }
+                .mm-label { font-size: 13px; color: #a0a0b0; flex: 1; font-weight: 600; }
                 
-                .mm-btn-el.green { color: #10b981; border-color: rgba(16, 185, 129, 0.2); background: rgba(16, 185, 129, 0.05); }
-                .mm-btn-el.green:hover { box-shadow: 0 4px 16px rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.4); }
-                
-                .mm-btn-el.blue { color: #3b82f6; border-color: rgba(59, 130, 246, 0.2); background: rgba(59, 130, 246, 0.05); }
-                .mm-btn-el.blue:hover { box-shadow: 0 4px 16px rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.4); }
-                
-                .mm-btn-el.red { color: #ef4444; border-color: rgba(239, 68, 68, 0.2); background: rgba(239, 68, 68, 0.05); }
-                .mm-btn-el.red:hover { box-shadow: 0 4px 16px rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.4); }
-                
-                .mm-btn-el.yellow { color: #f59e0b; border-color: rgba(245, 158, 11, 0.2); background: rgba(245, 158, 11, 0.05); }
-                .mm-btn-el.yellow:hover { box-shadow: 0 4px 16px rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.4); }
+                .mm-input-el {
+                    background: rgba(0,0,0,0.3) !important;
+                    border: 1px solid var(--mm-border) !important;
+                    color: #fff !important;
+                    font-size: 13px !important;
+                    font-weight: 600 !important;
+                    border-radius: 6px !important;
+                    outline: none !important;
+                    padding: 8px 12px !important;
+                    text-align: center !important;
+                    transition: all 0.3s ease !important;
+                    box-shadow: inset 0 2px 4px rgba(0,0,0,0.5) !important;
+                }
+                .mm-input-el:hover { background: rgba(0,0,0,0.5) !important; border-color: rgba(255,255,255,0.2) !important; }
+                .mm-input-el:focus {
+                    border-color: var(--mm-theme) !important;
+                    box-shadow: inset 0 2px 4px rgba(0,0,0,0.5), 0 0 12px var(--mm-theme) !important;
+                }
+
+                /* Glowing Checkboxes */
+                .mm-cb-wrap { display: flex; align-items: center; gap: 12px; cursor: pointer; margin-bottom: 12px; }
+                .mm-cb-wrap input { display: none; }
+                .mm-cb-box {
+                    width: 18px; height: 18px;
+                    background: rgba(0,0,0,0.4);
+                    border: 1px solid var(--mm-border);
+                    border-radius: 4px;
+                    display: flex; align-items: center; justify-content: center;
+                    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+                    position: relative;
+                }
+                .mm-cb-wrap:hover .mm-cb-box { border-color: var(--mm-theme); box-shadow: 0 0 8px var(--mm-theme); }
+                .mm-cb-wrap input:checked + .mm-cb-box {
+                    background: var(--mm-theme);
+                    border-color: var(--mm-theme);
+                    box-shadow: 0 0 12px var(--mm-theme);
+                    transform: scale(1.1);
+                }
+                .mm-cb-box::after { content: ''; width: 5px; height: 9px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg) scale(0); transition: transform 0.2s ease; opacity: 0; }
+                .mm-cb-wrap input:checked + .mm-cb-box::after { transform: rotate(45deg) scale(1); opacity: 1; }
 
                 /* Dropdown Overhaul */
                 .mm-dropdown-container { margin-bottom: 14px; position: relative; }
                 .mm-dropdown-trigger {
-                    background: rgba(0,0,0,0.25);
+                    background: var(--mm-surface);
                     border: 1px solid var(--mm-border);
-                    color: #fff;
-                    padding: 10px 14px;
-                    border-radius: 8px;
-                    font-size: 13px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    width: 100%;
-                    transition: all 0.2s ease;
+                    color: #fff; padding: 10px 14px; border-radius: 8px;
+                    font-size: 13px; font-weight: 600; cursor: pointer;
+                    display: flex; justify-content: space-between; align-items: center;
+                    width: 100%; transition: all 0.2s ease;
                 }
-                .mm-dropdown-trigger:hover {
-                    border-color: var(--mm-theme);
-                    background: rgba(0,0,0,0.4);
-                }
+                .mm-dropdown-trigger:hover { border-color: var(--mm-theme); background: rgba(255,255,255,0.05); }
+                
                 .mm-dropdown-menu {
-                    position: absolute;
-                    top: calc(100% + 6px);
-                    left: 0;
-                    width: 100%;
-                    background: rgba(20, 20, 25, 0.95);
+                    position: absolute; top: calc(100% + 8px); left: 0; width: 100%;
+                    background: rgba(15, 15, 15, 0.95);
                     backdrop-filter: blur(16px);
-                    border: 1px solid rgba(255,255,255,0.1);
-                    border-radius: 10px;
-                    max-height: 240px;
-                    overflow-y: auto;
-                    z-index: 10000;
-                    display: none;
-                    box-shadow: 0 16px 40px rgba(0,0,0,0.6);
+                    border: 1px solid var(--mm-border); border-radius: 8px;
+                    max-height: 220px; overflow-y: auto; z-index: 10000;
+                    display: none; opacity: 0; transform: translateY(-10px);
+                    box-shadow: 0 12px 32px rgba(0,0,0,0.8);
+                    transition: opacity 0.2s ease, transform 0.2s ease;
                 }
-                .mm-box:has(.mm-dropdown-menu.open) {
-                    overflow: visible !important;
-                    max-height: none !important;
-                }
-                .mm-dropdown-menu.open {
-                    display: block;
-                    animation: dd-slide 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-                }
+                .mm-box:has(.mm-dropdown-menu.open) { overflow: visible !important; max-height: none !important; }
+                .mm-dropdown-menu.open { display: block; opacity: 1; transform: translateY(0); }
+                
                 .mm-dropdown-menu::-webkit-scrollbar { width: 4px; }
                 .mm-dropdown-menu::-webkit-scrollbar-track { background: transparent; }
-                .mm-dropdown-menu::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
-                .mm-dropdown-menu::-webkit-scrollbar-thumb:hover { background: var(--mm-theme); }
+                .mm-dropdown-menu::-webkit-scrollbar-thumb { background: var(--mm-theme); border-radius: 10px; }
 
                 .mm-dropdown-item {
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    padding: 10px 14px;
-                    border-bottom: 1px solid rgba(255,255,255,0.03);
-                    gap: 12px;
-                    transition: all 0.2s ease;
+                    display: flex; align-items: center; justify-content: space-between;
+                    padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.05);
+                    gap: 12px; transition: background 0.2s ease;
                 }
-                .mm-dropdown-item:hover { background: rgba(255,255,255,0.05); padding-left: 18px; }
+                .mm-dropdown-item:hover { background: rgba(255,255,255,0.08); padding-left: 16px; }
                 .mm-dropdown-item:last-child { border-bottom: none; }
-
-                .mm-dd-title { font-size: 12px; color: #f1f5f9; font-weight: 600; flex: 2; }
+                
+                .mm-dd-title { font-size: 12px; color: #fff; font-weight: 600; flex: 2; }
                 .mm-dd-id {
-                    font-size: 10px;
-                    color: var(--mm-muted);
-                    background: rgba(0,0,0,0.4);
-                    padding: 3px 6px;
-                    border-radius: 4px;
-                    font-family: 'JetBrains Mono', monospace;
-                    border: 1px solid rgba(255,255,255,0.05);
+                    font-size: 10px; color: #888; background: rgba(0,0,0,0.5);
+                    padding: 3px 6px; border-radius: 4px; font-family: monospace; border: 1px solid var(--mm-border);
                 }
                 .mm-dd-join-btn {
-                    padding: 5px 12px;
-                    background: var(--mm-theme);
-                    border: none;
-                    color: #fff;
-                    font-size: 11px;
-                    font-weight: 700;
-                    border-radius: 6px;
-                    cursor: pointer;
-                    transition: all 0.2s ease;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                    padding: 5px 10px; background: var(--mm-theme); border: none; color: #fff;
+                    font-size: 11px; font-weight: 800; border-radius: 4px; cursor: pointer;
+                    transition: all 0.2s ease; box-shadow: 0 0 10px rgba(0,0,0,0.5);
                 }
-                .mm-dd-join-btn:hover {
-                    filter: brightness(1.15);
-                    transform: translateY(-1px);
-                    box-shadow: 0 6px 16px var(--mm-theme);
-                }
+                .mm-dd-join-btn:hover { transform: scale(1.08); box-shadow: 0 0 15px var(--mm-theme); }
+                .mm-dd-join-btn:active { transform: scale(0.95); }
 
-                @keyframes dd-slide {
-                    0% { opacity: 0; transform: translateY(-8px) scale(0.98); }
-                    100% { opacity: 1; transform: translateY(0) scale(1); }
-                }
-
-                /* Footer Polish */
+                /* Cyber Footer */
                 .mm-footer {
-                    background: rgba(0, 0, 0, 0.2) !important;
+                    background: rgba(0, 0, 0, 0.4) !important;
                     border-top: 1px solid var(--mm-border);
                     padding: 10px 16px;
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
-                    border-radius: 0 0 16px 16px;
                 }
-                .mm-status-label { font-size: 10px; color: var(--mm-muted); font-weight: 700; letter-spacing: 0.5px; }
+                .mm-status-label { font-size: 10px; color: #7a7a8c; text-transform: uppercase; letter-spacing: 1px; font-weight: 800; }
                 .mm-status-wrapper { display: flex; align-items: center; gap: 8px; }
                 .mm-status-text { font-size: 11px; font-weight: 800; letter-spacing: 0.5px; }
-                .mm-status-text.connected { color: #10b981; text-shadow: 0 0 10px rgba(16,185,129,0.4); }
-                .mm-status-text.disconnected { color: #ef4444; text-shadow: 0 0 10px rgba(239,68,68,0.4); }
-                .mm-status-dot { width: 8px; height: 8px; border-radius: 50%; }
-                .mm-status-dot.connected { background: #10b981; box-shadow: 0 0 8px #10b981; }
-                .mm-status-dot.disconnected { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
+                .mm-status-text.connected { color: #00ff88; text-shadow: 0 0 8px rgba(0,255,136,0.5); }
+                .mm-status-text.disconnected { color: #ff2a5f; text-shadow: 0 0 8px rgba(255,42,95,0.5); }
+                
+                .mm-status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+                .mm-status-dot.connected { background: #00ff88; box-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88; }
+                .mm-status-dot.disconnected { background: #ff2a5f; box-shadow: 0 0 10px #ff2a5f, 0 0 20px #ff2a5f; }
             `;
 
             function inject() {
@@ -455,7 +362,7 @@
                 const savedX = Config.get('menu_x', null);
                 const savedY = Config.get('menu_y', '20px');
                 box.style.cssText = `
-                    width: ${opts.width || '360px'};
+                    width: ${opts.width || '440px'};
                     top: ${savedY};
                     left: ${savedX ? savedX : (opts.x === 'right' ? 'auto' : (opts.x || '20px'))};
                     right: ${savedX ? 'auto' : (opts.x === 'right' ? '20px' : 'auto')};
@@ -464,6 +371,9 @@
                 const header = document.createElement('div');
                 header.className = 'mm-header';
                 header.innerHTML = `<span class="mm-title">${title}</span>`;
+
+                const controls = document.createElement('div');
+                controls.className = 'mm-controls';
 
                 const minBtn = document.createElement('button');
                 minBtn.className = 'mm-btn-min';
@@ -477,8 +387,9 @@
                 closeBtn.className = 'mm-btn-close';
                 closeBtn.onclick = () => box.remove();
 
-                header.appendChild(minBtn);
-                header.appendChild(closeBtn);
+                controls.appendChild(minBtn);
+                controls.appendChild(closeBtn);
+                header.appendChild(controls);
 
                 const inner = document.createElement('div');
                 const tabBar = document.createElement('div');
@@ -493,20 +404,20 @@
                 const footer = document.createElement('div');
                 footer.className = 'mm-footer';
                 footer.innerHTML = `
-                    <span class="mm-status-label">SYS_STATE</span>
+                    <span class="mm-status-label">SYS.STATUS</span>
                     <div class="mm-status-wrapper">
                         <span id="mm-dot" class="mm-status-dot disconnected"></span>
                         <span id="mm-status" class="mm-status-text disconnected">OFFLINE</span>
                     </div>
                 `;
-                box.appendChild(footer);
+                box.appendChild(footer); 
                 document.body.appendChild(box);
 
+                // --- Kinetic Dragging ---
                 let drag = false;
                 let ox = 0, oy = 0, mouseX = 0, mouseY = 0, currentX = 0, currentY = 0, targetX = 0, targetY = 0;
                 let vx = 0, vy = 0, lastMouseX = 0, lastMouseY = 0;
                 const lerpSpeed = 0.15, friction = 0.92;
-
                 const rect = box.getBoundingClientRect();
                 currentX = targetX = rect.left;
                 currentY = targetY = rect.top;
@@ -519,7 +430,7 @@
                     mouseY = lastMouseY = e.clientY;
                     targetX = mouseX - ox;
                     targetY = mouseY - oy;
-                    vx = vy = 0;
+                    vx = 0; vy = 0;
                     box.style.right = 'auto';
                     e.preventDefault();
                 });
@@ -537,33 +448,31 @@
                 function updatePhysicsLoop() {
                     let targetTilt = 0;
                     const boxRect = box.getBoundingClientRect();
-                    const boxWidth = boxRect.width, boxHeight = boxRect.height;
                     const screenWidth = window.innerWidth, screenHeight = window.innerHeight;
 
                     if (drag) {
-                        const currentMouseX = mouseX;
-                        vx = currentMouseX - lastMouseX; vy = mouseY - lastMouseY;
-                        lastMouseX = currentMouseX; lastMouseY = mouseY;
+                        vx = mouseX - lastMouseX; vy = mouseY - lastMouseY;
+                        lastMouseX = mouseX; lastMouseY = mouseY;
                         currentX += (targetX - currentX) * lerpSpeed;
                         currentY += (targetY - currentY) * lerpSpeed;
                         targetTilt = Math.max(-8, Math.min(8, vx * 0.3));
                     } else {
                         vx *= friction; vy *= friction;
-                        if (Math.abs(vx) < 0.05) vx = 0;
-                        if (Math.abs(vy) < 0.05) vy = 0;
+                        if (Math.abs(vx) < 0.05) vx = 0; if (Math.abs(vy) < 0.05) vy = 0;
                         currentX += vx; currentY += vy;
                         targetTilt = Math.max(-8, Math.min(8, vx * 0.3));
 
                         if (vx === 0 && vy === 0 && box.style.left !== currentX + 'px') {
-                            Config.set('menu_x', box.style.left); Config.set('menu_y', box.style.top);
+                            Config.set('menu_x', box.style.left);
+                            Config.set('menu_y', box.style.top);
                         }
                     }
 
                     const elasticity = 0.5;
-                    if (currentX < 0) { currentX = 0; vx = -vx * elasticity; } 
-                    else if (currentX + boxWidth > screenWidth) { currentX = screenWidth - boxWidth; vx = -vx * elasticity; }
-                    if (currentY < 0) { currentY = 0; vy = -vy * elasticity; } 
-                    else if (currentY + boxHeight > screenHeight) { currentY = screenHeight - boxHeight; vy = -vy * elasticity; }
+                    if (currentX < 0) { currentX = 0; vx = -vx * elasticity; }
+                    else if (currentX + boxRect.width > screenWidth) { currentX = screenWidth - boxRect.width; vx = -vx * elasticity; }
+                    if (currentY < 0) { currentY = 0; vy = -vy * elasticity; }
+                    else if (currentY + boxRect.height > screenHeight) { currentY = screenHeight - boxRect.height; vy = -vy * elasticity; }
 
                     currentTilt += (targetTilt - currentTilt) * 0.15;
                     box.style.left = currentX + 'px';
@@ -574,17 +483,18 @@
                 }
 
                 requestAnimationFrame(updatePhysicsLoop);
+
                 document.addEventListener('keydown', (e) => {
                     if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.isContentEditable)) return;
                     if (e.ctrlKey && e.shiftKey && (e.keyCode === 88 || e.key.toLowerCase() === 'x')) {
                         e.preventDefault(); e.stopPropagation();
                         if (box) {
-                            const centerX = Math.max(50, (window.innerWidth / 2) - 180);
+                            const centerX = Math.max(50, (window.innerWidth / 2) - 160);
                             const centerY = Math.max(50, (window.innerHeight / 2) - 200);
                             box.style.left = centerX + 'px'; box.style.top = centerY + 'px'; box.style.transform = 'none';
-                            currentX = targetX = centerX; currentY = targetY = centerY;
-                            vx = vy = currentTilt = 0;
+                            currentX = targetX = centerX; currentY = targetY = centerY; vx = vy = currentTilt = 0;
                             Config.set('menu_x', centerX + 'px'); Config.set('menu_y', centerY + 'px');
+                            unsafeWindow._MM_Log("🎯 RECOVERY: Snapped to center");
                         }
                     }
                 });
@@ -602,26 +512,30 @@
                     tabEl.onclick = () => {
                         const oldHeight = box.getBoundingClientRect().height;
                         box.style.maxHeight = oldHeight + 'px';
+
                         tabs.forEach(t => t.el.classList.remove('active'));
                         tabEl.classList.add('active');
 
                         bodyEl.style.display = 'block'; bodyEl.style.position = 'absolute'; bodyEl.style.visibility = 'hidden';
                         box.style.maxHeight = 'none';
-                        const targetHeight = header.getBoundingClientRect().height + tabBar.getBoundingClientRect().height + bodyEl.scrollHeight + 40;
+
+                        const headerHeight = header.getBoundingClientRect().height;
+                        const tabsBarHeight = tabBar.getBoundingClientRect().height;
+                        const targetHeight = headerHeight + tabsBarHeight + bodyEl.scrollHeight + 32;
+
                         bodyEl.style.display = ''; bodyEl.style.position = ''; bodyEl.style.visibility = '';
 
                         tabs.forEach(t => t.body.classList.remove('active'));
                         bodyEl.classList.add('active');
 
                         box.style.maxHeight = oldHeight + 'px';
-                        void box.offsetHeight;
+                        void box.offsetHeight; 
                         box.style.maxHeight = targetHeight + 'px';
 
                         setTimeout(() => { box.style.maxHeight = ''; }, 400);
                     };
 
-                    tabBar.appendChild(tabEl);
-                    tabContent.appendChild(bodyEl);
+                    tabBar.appendChild(tabEl); tabContent.appendChild(bodyEl);
                     tabs.push({ el: tabEl, body: bodyEl });
 
                     if (tabs.length === 1) { tabEl.classList.add('active'); bodyEl.classList.add('active'); }
@@ -664,12 +578,9 @@
                     lbl.className = 'mm-label';
                     lbl.textContent = label;
                     
-                    wrap.appendChild(inp);
-                    wrap.appendChild(box);
-                    wrap.appendChild(lbl);
+                    wrap.appendChild(inp); wrap.appendChild(box); wrap.appendChild(lbl);
 
                     inp.onchange = () => {
-                        if (typeof AudioFX !== 'undefined' && AudioFX.playToggle) AudioFX.playToggle(inp.checked);
                         Config.set(configKey, inp.checked);
                         if (onChange) onChange(inp.checked);
                     };
@@ -688,9 +599,9 @@
                     inp.placeholder = placeholder || '';
 
                     if (inputType === 'color') {
-                        inp.style.cssText = 'width: 48px; height: 28px; border: none; background: none; cursor: pointer; padding: 0; border-radius: 4px; box-shadow: none;';
+                        inp.style.cssText = 'width: 44px; height: 28px; border: 1px solid var(--mm-border); background: rgba(0,0,0,0.3); cursor: pointer; padding: 0; border-radius: 4px;';
                     } else {
-                        inp.style.width = '140px';
+                        inp.style.width = '130px';
                     }
 
                     inp.value = Config.get(configKey, defaultVal);
@@ -699,8 +610,7 @@
                         if (onChange) onChange(inp.value);
                     };
 
-                    row.appendChild(inp);
-                    sec.appendChild(row);
+                    row.appendChild(inp); sec.appendChild(row);
                     return { button, checkbox, input, dropdown };
                 }
                 function dropdown(label, dataArray, actionBtnLabel, onSelect) {
@@ -709,7 +619,7 @@
 
                     const trigger = document.createElement('button');
                     trigger.className = 'mm-dropdown-trigger';
-                    trigger.innerHTML = `<span>${label}</span> <span style="font-size: 10px;">▼</span>`;
+                    trigger.innerHTML = `<span>${label}</span> <span style="font-size: 10px; color: var(--mm-theme);">▼</span>`;
                     
                     const menu = document.createElement('div');
                     menu.className = 'mm-dropdown-menu';
@@ -747,7 +657,7 @@
                             e.stopPropagation();
                             if (typeof AudioFX !== 'undefined' && AudioFX.playClick) AudioFX.playClick();
                             if (typeof onSelect === 'function') onSelect(itemData.id, itemData.title);
-                            menu.classList.remove('open');
+                            menu.classList.remove('open'); 
                         };
 
                         item.appendChild(actionBtn);
@@ -766,43 +676,37 @@
             return { Window, updateStyle: inject };
         })();
 
-        const win = ModMenu.Window("Penguin Cheat Terminal", { x: 'right', y: '20px', width: '380px' });
+        // --- MAIN MENU ---
+        const win = ModMenu.Window("🐧 PENGUIN TERMINAL", { x: 'right', y: '20px', width: '360px' });
 
         const general = win.addTab("General");
-        general.section("Player Mechanics", "Player movement & physics")
-            .checkbox("Speed Hack", "speed_hack_enabled", true, val => unsafeWindow._MM_Log("Speed hack:", val))
-            .checkbox("No-Clip", "noclip_enabled", false, val => unsafeWindow._MM_Log("No clip:", val));
+        general.section("Player", "Movement & State")
+            .checkbox("God Mode Speed", "speed_hack_enabled", true, val => unsafeWindow._MM_Log("Speed hack:", val))
+            .checkbox("Ghost Noclip", "noclip_enabled", false, val => unsafeWindow._MM_Log("No clip:", val));
 
-        general.section("Economy Setup", "Money injections")
-            .button("💸 Inject 1000 Coins", "green", () => {
+        general.section("Economy")
+            .button("💸 Inject 1000 Coins", "", () => {
                 unsafeWindow._MM_Log("Joined room 901");
                 sendPacket('join_room', { room: 901, x: 100, y: 100 });
-                unsafeWindow.setTimeout(() => {
-                    sendPacket('game_over', { coins: 1000 });
-                }, 5000);
-                unsafeWindow._MM_Log("Sent gameover with 1000 coins");
+                unsafeWindow.setTimeout(() => { sendPacket('game_over', { coins: 1000 }); }, 5000);
             });
 
-        const roomsSection = win.addTab("Rooms").section("Database Sync", "Live room list fetching");
-        const inventory = win.addTab("Inventory").section("Item Spawner", "Add gear to account");
+        const roomsSection = win.addTab("Rooms").section("Teleportation", "Live server map");
+        const inventory = win.addTab("Inventory").section("Item Spawner", "Add missing items");
 
         const misc = win.addTab("Settings");
-        misc.section("Aesthetics", "Configure UI appearance")
-            .input("Accent Glow", "theme_color", "#ff2a2a", "", val => {
-                document.documentElement.style.setProperty('--mm-theme', val);
-            }, "color")
-            .input("Header Text", "title_color", "#ffffff", "", val => {
-                document.documentElement.style.setProperty('--mm-title', val);
-            }, "color");
+        misc.section("Aura Control", "Customize your drip")
+            .input("Neon Theme", "theme_color", "#ff2a5f", "", val => { document.documentElement.style.setProperty('--mm-theme', val); }, "color")
+            .input("Title Glow", "title_color", "#ffffff", "", val => { document.documentElement.style.setProperty('--mm-title', val); }, "color");
 
-        misc.section("System Utilities")
-            .button("🔍 Dump Sockets", "blue", () => unsafeWindow._MM_Log('[ModMenu] Sockets:', unsafeWindow._MM_SOCKETS.length))
-            .button("🗑️ Reset UI Position", "red", () => {
+        misc.section("Debug & Wipe")
+            .button("🔍 Dump Sockets", "", () => unsafeWindow._MM_Log('[ModMenu] Sockets:', unsafeWindow._MM_SOCKETS.length))
+            .button("🗑️ Nuke Position", "", () => {
                 Config.set('menu_x', null); Config.set('menu_y', '20px');
-                alert("Hit F5 to reset window pos bro!");
+                alert("Refresh page to reset UI position!");
             });
         
-        const loadingTrigger = roomsSection.button("🔄 Syncing Live Map Database...", "yellow");
+        const loadingTrigger = roomsSection.button("🔄 Syncing Live Map Database...", "");
         const crumbsUrl = "https://media.cplegacy.com/crumbs/en/crumbs.json?v=" + Date.now();
 
         GM_xmlhttpRequest({
@@ -813,55 +717,51 @@
                 if (response.status === 200) {
                     try {
                         const rawData = JSON.parse(response.responseText);
-                        const roomsObject = rawData.rooms;
-                        const itemsObject = rawData.items;
-                        
                         const parsedRoomsArray = [];
                         const parsedItemsArray = [];
 
-                        for (const id in roomsObject) {
-                            if (roomsObject.hasOwnProperty(id)) {
-                                const rawName = roomsObject[id].key || "Unknown Room";
+                        for (const id in rawData.rooms) {
+                            if (rawData.rooms.hasOwnProperty(id)) {
+                                const rawName = rawData.rooms[id].key || "Unknown Room";
                                 parsedRoomsArray.push({ title: rawName.charAt(0).toUpperCase() + rawName.slice(1), id: id });
                             }
                         }
 
-                        for (const itemID in itemsObject){
-                            if(itemsObject.hasOwnProperty(itemID)){
-                                parsedItemsArray.push({ title: itemsObject[itemID].name || "Unknown Item", id: itemID });
+                        for (const itemID in rawData.items){
+                            if(rawData.items.hasOwnProperty(itemID)){
+                                parsedItemsArray.push({ title: rawData.items[itemID].name || "Unknown Item", id: itemID });
                             }
                         }
-
-                        const btnEl = document.querySelector('.mm-btn-el.yellow');
+                        
+                        const btnEl = document.querySelector('.mm-btn-el:contains("Syncing Live Map Database")');
                         if (btnEl) btnEl.remove();
 
-                        roomsSection.dropdown("🌐 Select Warp Target...", parsedRoomsArray, "Warp", (id, title) => {
-                            sendPacket("join_room", { room: parseInt(id), x: 100,})
+                        roomsSection.dropdown("🌐 Target Sector...", parsedRoomsArray, "Warp", (id, title) => {
+                            sendPacket("join_room", { room: parseInt(id), x: 100 })
                         });
-                        inventory.dropdown("Select Item ID", parsedItemsArray, "Spawn", (id, title) => {
-                            sendPacket("add_item", { item: parseInt(id)})
+                        inventory.dropdown("📦 Target Item...", parsedItemsArray, "Add", (id, title) => {
+                            sendPacket("add_item", { item: parseInt(id) })
                         });
-                        unsafeWindow._MM_Log(`Successfully compiled ${parsedRoomsArray.length} rooms natively.`);
 
-                    } catch (err) {
-                        unsafeWindow._MM_Error("Failed to parse game crumbs data.", err);
-                    }
+                    } catch (err) { console.error(err); }
                 }
             }
         });
     }
 
+    // Check game ready
     function startMenuEngine() {
         const hasActiveSocket = !!(unsafeWindow._MM_SOCKETS && unsafeWindow._MM_SOCKETS.length > 0);
         if (hasActiveSocket) {
-            unsafeWindow._MM_Log("[ModMenu] Active WebSocket found! Launching UI...");
             if (document.body) initMenu();
             else document.addEventListener('DOMContentLoaded', initMenu);
         } else {
             setTimeout(startMenuEngine, 500);
         }
     }
+    startMenuEngine();
 
+    // Fix: Moved status checker inside the scope where it belongs
     function runStatusCheckLoop() {
         const statusText = document.getElementById('mm-status');
         const statusDot = document.getElementById('mm-dot');
@@ -874,13 +774,12 @@
                 statusDot.className = 'mm-status-dot connected';
             } else {
                 statusText.className = 'mm-status-text disconnected';
-                statusText.textContent = 'NO SIGNAL';
+                statusText.textContent = 'OFFLINE';
                 statusDot.className = 'mm-status-dot disconnected';
             }
         }
         setTimeout(runStatusCheckLoop, 1000);
     }
-
-    startMenuEngine();
     runStatusCheckLoop();
+
 })();
