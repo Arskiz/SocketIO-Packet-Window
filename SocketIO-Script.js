@@ -72,8 +72,6 @@
     function initMenu() {
         const ModMenu = (() => {
             const style = `
-                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
                 :root { 
                     --mm-theme: ${Config.get('theme_color', '#ff2a2a')};
                     --mm-title: ${Config.get('title_color', '#ffffff')};
