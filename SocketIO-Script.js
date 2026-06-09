@@ -379,6 +379,24 @@
                     opacity: 0; display: flex; align-items: center; gap: 8px;
                 }
                 .mm-toast.show { transform: translateX(0); opacity: 1; }
+
+                /* --- TIMER UI DRIP --- */
+                .mm-timer-wrap {
+                    max-height: 0; opacity: 0; overflow: hidden;
+                    transition: max-height 0.4s ease, opacity 0.4s ease, padding 0.4s ease;
+                    background: #111; border-radius: 0 0 2px 2px; 
+                    border: 1px solid transparent; border-top: none;
+                    border-radius: 3px;
+                    text-align: center; position: relative; z-index: 1;
+                }
+                .mm-timer-wrap.active {
+                    max-height: 40px; opacity: 1; padding: 6px;
+                    border-color: var(--mm-theme);
+                }
+                .mm-timer-text { 
+                    font-family: Consolas, monospace; font-size: 11px; 
+                    color: #ffcc00; font-weight: bold; text-transform: uppercase;
+                }
             `;
 
             function showNotification(msg) {
@@ -695,7 +713,7 @@
             }
 
             function Tab(container) {
-                function section(title, subtitle) {
+                function section(title, subtitle, pic=null) {
                     const sec = document.createElement('div');
                     sec.className = 'mm-section';
                     sec.innerHTML = `<div class="mm-section-title">${title}</div>${subtitle ? `<div class="mm-subtitle">${subtitle}</div>` : ''}`;
@@ -789,6 +807,11 @@
                     const menu = document.createElement('div');
                     menu.className = 'mm-dropdown-menu';
 
+                    // Spawn the hidden timer box right below the menu
+                    const timerWrap = document.createElement('div');
+                    timerWrap.className = 'mm-timer-wrap';
+                    timerWrap.innerHTML = `<span class="mm-timer-text">WAITING...</span>`;
+
                     const closeOnOutsideClick = (e) => {
                         if (!container.contains(e.target)) {
                             menu.classList.remove('open');
@@ -799,9 +822,7 @@
                     trigger.onclick = (e) => {
                         e.stopPropagation();
                         const isOpen = menu.classList.contains('open');
-                        
                         document.querySelectorAll('.mm-dropdown-menu').forEach(m => m.classList.remove('open'));
-                        
                         if (!isOpen) {
                             menu.classList.add('open');
                             document.addEventListener('click', closeOnOutsideClick);
@@ -811,7 +832,6 @@
                     dataArray.forEach(itemData => {
                         const item = document.createElement('div');
                         item.className = 'mm-dropdown-item';
-
                         item.innerHTML = `
                             <span class="mm-dd-title">${itemData.data1}</span>
                             <span class="mm-dd-id">${secLabel}: ${itemData.data2}</span>
@@ -825,7 +845,8 @@
                             e.stopPropagation();
                             if (typeof AudioFX !== 'undefined' && AudioFX.playClick) AudioFX.playClick();
                             if (typeof onSelect === 'function') {
-                                onSelect(itemData.data1, itemData.data2);
+                                // WE PASS THE TIMER WRAP OVER TO THE CALLBACK NOW 🔥
+                                onSelect(itemData.data1, itemData.data2, timerWrap); 
                             }
                             menu.classList.remove('open');
                         };
@@ -836,6 +857,7 @@
 
                     container.appendChild(trigger);
                     container.appendChild(menu);
+                    container.appendChild(timerWrap); // Attach it to the bottom
                     sec.appendChild(container);
 
                     return { button, checkbox, input, dropdown };
@@ -870,16 +892,57 @@
         }
 
         // --- Economy ---
-        function sendCoinHack(coinAmount, delay=2000){
+        function sendCoinHack(coinAmount, delayMs, timerWrap) {
+            // Instantly warp to room
             sendPacket('join_room', { room: 901, x: 100, y: 100 });
-                unsafeWindow.setTimeout(() => {
-                    sendPacket('game_over', { coins: coinAmount });
-                    
-                    // Done -> inform user they can click X
+            
+            if (timerWrap) {
+                // Drop down the UI
+                timerWrap.classList.add('active');
+                const textEl = timerWrap.querySelector('.mm-timer-text');
+                textEl.style.color = '#ffcc00'; // Reset color to yellow
+                
+                let timeLeft = delayMs;
 
-                }, delay);
+                // Big brain math to format MS into MM:SS
+                const formatTime = (ms) => {
+                    let totalSec = Math.floor(ms / 1000);
+                    let m = Math.floor(totalSec / 60);
+                    let s = totalSec % 60;
+                    return `${m}m ${s < 10 ? '0' : ''}${s}s`;
+                };
+                
+                textEl.textContent = `WAIT: ${formatTime(timeLeft)}`;
+                
+                // Start ticking down
+                const interval = setInterval(() => {
+                    timeLeft -= 1000;
+                    
+                    if (timeLeft <= 0) {
+                        clearInterval(interval);
+                        
+                        // Fire the bag packet
+                        sendPacket('game_over', { coins: coinAmount });
+                        
+                        // Update UI to show we secured it
+                        textEl.style.color = "var(--mm-theme)"; // Make it green
+                        textEl.textContent = "Coins generated. Press X Ingame to collect.";
+                        //showNotification(`Secured ${coinAmount} coins! Click X in game.`);
+                        
+                        // Hide the timer back up into the dropdown after 3.5 seconds
+                        setTimeout(() => {
+                            timerWrap.classList.remove('active');
+                        }, 3500);
+                        
+                    } else {
+                        // Keep updating the text
+                        textEl.textContent = `WAIT: ${formatTime(timeLeft)}`;
+                    }
+                }, 1000);
+            }
         }
 
+        
 
         ///////////////////////////////
         // MAIN TERMINAL UI
@@ -902,8 +965,8 @@
             .checkbox("Example Box 2", "noclip_enabled", false, val => unsafeWindow._MM_Log("No clip:", val));
 
         general.section("Economy")
-            .dropdown("Select Coin Amount", coinOptions, "Get Coins", "Wait time", (data1, data2) => {
-                sendCoinHack(data1, data2);
+            .dropdown("Select Coin Amount", coinOptions, "Get Coins", "Wait time", (data1, data2, timerUI) => {
+                sendCoinHack(data1, data2, timerUI);
             });
 
         // --- ROOMS TAB ---
