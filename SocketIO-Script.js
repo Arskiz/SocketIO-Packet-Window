@@ -1136,102 +1136,102 @@
         }
 
         function hookSocketIncoming() {
-            if (!unsafeWindow._MM_SOCKETS || unsafeWindow._MM_SOCKETS.length === 0) {
-                setTimeout(hookSocketIncoming, 1000);
-                return;
-            }
+    if (!unsafeWindow._MM_SOCKETS || unsafeWindow._MM_SOCKETS.length === 0) {
+        setTimeout(hookSocketIncoming, 1000);
+        return;
+    }
 
-            const socket = unsafeWindow._MM_SOCKETS[0];
-            
-            if (socket && !socket.isFullyHooked) {
-                socket.isFullyHooked = true;
-                _MM_Log("🔥 [SNIFFER] INTERNAL ENGINE ROUTER RAWDOGGED FR FR 🔥");
+    const socket = unsafeWindow._MM_SOCKETS[0];
 
-                // We go straight to the Engine.io core
-                if (socket.io && socket.io.engine) {
-                    const engine = socket.io.engine;
+    if (socket && !socket.isFullyHooked) {
+        socket.isFullyHooked = true;
+        _MM_Log("🔥 [SNIFFER] HOOKED FR FR 🔥");
 
-                    // 📥 INCOMING TRAFFIC (Hijacks the raw packet receiver)
-                    if (engine.onPacket) {
-                        const originalOnPacket = engine.onPacket;
-                        engine.onPacket = function(packet) {
-                            try {
-                                if (snifferRecording) {
-                                    // packet.data contains the buffer if it's msgpack
-                                    let decoded = packet.data;
-                                    if (typeof msgpack !== 'undefined' && (packet.data instanceof ArrayBuffer || packet.data instanceof Uint8Array)) {
-                                        decoded = msgpack.decode(new Uint8Array(packet.data));
-                                    }
-                                    
-                                    // Don't flood the UI with ping/pong keep-alive bullshit
-                                    if (packet.type !== 'ping' && packet.type !== 'pong') {
-                                        logPacket('IN', decoded || packet);
-                                    }
-
-                                    // FIX PLAYER TRACKER UI 
-                                    if (decoded && decoded.data) {
-                                        const args = decoded.data;
-                                        const cmd = args[0], subCmd = args[1], payload = args[2]; 
-                                        if (cmd === 'message') {
-                                            if (subCmd === 'add_player' && payload && payload.user) {
-                                                const pData = payload.user;
-                                                if (!currentPlayers.some(p => p.id === pData.id)) {
-                                                    currentPlayers.push({ id: pData.id, username: pData.username || pData.realUsername });
-                                                    updatePlayerListUI();
-                                                }
-                                            } else if (subCmd === 'remove_player' && payload) {
-                                                const targetId = typeof payload === 'object' ? payload.id : payload;
-                                                currentPlayers = currentPlayers.filter(p => p.id !== parseInt(targetId));
-                                                updatePlayerListUI();
-                                            }
-                                        }
-                                    }
-                                }
-                            } catch(e) {}
-                            return originalOnPacket.apply(this, arguments);
-                        };
-                    }
-
-                    // 📤 OUTGOING TRAFFIC (Hijacks the literal send buffer)
-                    if (engine.write) {
-                        const originalWrite = engine.write;
-                        engine.write = function(packets) {
-                            try {
-                                if (snifferRecording) {
-                                    const pkts = Array.isArray(packets) ? packets : [packets];
-                                    pkts.forEach(p => {
-                                        let decoded = p.data;
-                                        if (typeof msgpack !== 'undefined' && (p.data instanceof ArrayBuffer || p.data instanceof Uint8Array)) {
-                                            decoded = msgpack.decode(new Uint8Array(p.data));
-                                        }
-                                        logPacket('OUT', decoded || p);
-                                    });
-                                }
-                            } catch(e) {}
-                            return originalWrite.apply(this, arguments);
-                        };
-                    }
-                }
-
-                // 💉 TERMINAL INJECT HOOK (Catches your custom hacks)
-                if (unsafeWindow._MM_sendRaw && !unsafeWindow._MM_sendRaw.hooked) {
-                    const originalSendRaw = unsafeWindow._MM_sendRaw;
-                    unsafeWindow._MM_sendRaw = function(encodedPacket) {
-                        try {
-                            if (snifferRecording && typeof msgpack !== 'undefined') {
-                                const decoded = msgpack.decode(encodedPacket);
-                                logPacket('OUT (TERMINAL)', decoded);
-                            }
-                        } catch(e) {}
-                        return originalSendRaw.apply(this, arguments);
-                    };
-                    unsafeWindow._MM_sendRaw.hooked = true; 
-                }
-            }
-            
-            // Loop just in case it drops
-            setTimeout(hookSocketIncoming, 2000); 
+        const engine = socket.io?.engine;
+        if (!engine) {
+            _MM_Log("❌ No engine found");
+            return;
         }
+
+        // ✅ INCOMING — hook the EventEmitter directly
+        engine.on('data', function(rawData) {
+            try {
+                if (!snifferRecording) return;
+
+                let decoded = rawData;
+                if (typeof msgpack !== 'undefined' &&
+                    (rawData instanceof ArrayBuffer || rawData instanceof Uint8Array)) {
+                    decoded = msgpack.decode(new Uint8Array(rawData));
+                }
+
+                logPacket('IN', decoded);
+
+                // Player tracker — socket.io packets are typically [eventName, payload]
+                if (Array.isArray(decoded)) {
+                    const [cmd, subCmd, payload] = decoded;
+                    if (cmd === 'message') {
+                        if (subCmd === 'add_player' && payload?.user) {
+                            const pData = payload.user;
+                            if (!currentPlayers.some(p => p.id === pData.id)) {
+                                currentPlayers.push({
+                                    id: pData.id,
+                                    username: pData.username || pData.realUsername
+                                });
+                                updatePlayerListUI();
+                            }
+                        } else if (subCmd === 'remove_player' && payload) {
+                            const targetId = typeof payload === 'object' ? payload.id : payload;
+                            currentPlayers = currentPlayers.filter(p => p.id !== parseInt(targetId));
+                            updatePlayerListUI();
+                        }
+                    }
+                }
+            } catch(e) { _MM_Log("❌ IN hook error: " + e); }
+        });
+
+        // ✅ OUTGOING — hook transport.write at the right level
+        const transport = engine.transport;
+        if (transport && transport.write && !transport.write._hooked) {
+            const origWrite = transport.write.bind(transport);
+            transport.write = function(packets, callback) {
+                try {
+                    if (snifferRecording) {
+                        const pkts = Array.isArray(packets) ? packets : [packets];
+                        pkts.forEach(p => {
+                            let decoded = p.data;
+                            if (typeof msgpack !== 'undefined' &&
+                                (p.data instanceof ArrayBuffer || p.data instanceof Uint8Array)) {
+                                decoded = msgpack.decode(new Uint8Array(p.data));
+                            }
+                            if (p.type !== 'ping' && p.type !== 'pong') {
+                                logPacket('OUT', decoded ?? p);
+                            }
+                        });
+                    }
+                } catch(e) { _MM_Log("❌ OUT hook error: " + e); }
+                return origWrite(packets, callback);
+            };
+            transport.write._hooked = true;
+        }
+
+        // ✅ Terminal inject hook — sama kuin ennen, tää oli ok
+        if (unsafeWindow._MM_sendRaw && !unsafeWindow._MM_sendRaw.hooked) {
+            const originalSendRaw = unsafeWindow._MM_sendRaw;
+            unsafeWindow._MM_sendRaw = function(encodedPacket) {
+                try {
+                    if (snifferRecording && typeof msgpack !== 'undefined') {
+                        const decoded = msgpack.decode(encodedPacket);
+                        logPacket('OUT (TERMINAL)', decoded);
+                    }
+                } catch(e) {}
+                return originalSendRaw.apply(this, arguments);
+            };
+            unsafeWindow._MM_sendRaw.hooked = true;
+        }
+    }
+
+    setTimeout(hookSocketIncoming, 2000);
+}
         buildSnifferUI();
 
         let antiAFKInterval = null;
