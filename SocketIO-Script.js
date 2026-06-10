@@ -1152,7 +1152,7 @@
                 if (!snifferRecording) return;
                 if (!(e.data instanceof ArrayBuffer)) return;
 
-                const decoded = msgpack.decode(new Uint8Array(e.data));
+                const decoded = unsafeWindow.msgpack.decode(new Uint8Array(e.data));
                 logPacket('IN', decoded);
 
                 // Player tracker
@@ -1180,7 +1180,7 @@
         socket.send = function(data) {
             try {
                 if (snifferRecording && data instanceof ArrayBuffer) {
-                    const decoded = msgpack.decode(new Uint8Array(data));
+                    const decoded = unsafeWindow.msgpack.decode(new Uint8Array(data));
                     logPacket('OUT', decoded);
                 }
             } catch(e) {}
@@ -1191,7 +1191,7 @@
     setTimeout(hookSocketIncoming, 2000);
 }
         buildSnifferUI();
-
+hookSocketIncoming();
         let antiAFKInterval = null;
         function initiateAntiAFKKick(state) {
             if (state) {
