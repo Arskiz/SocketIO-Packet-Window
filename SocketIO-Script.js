@@ -1145,89 +1145,61 @@
 
     if (socket && !socket.isFullyHooked) {
         socket.isFullyHooked = true;
-        _MM_Log("🔥 [SNIFFER] HOOKED FR FR 🔥");
+        _MM_Log("🔥 [SNIFFER] RAW WEBSOCKET HOOKED FR FR 🔥");
 
-        const engine = socket.io?.engine;
-        if (!engine) {
-            _MM_Log("❌ No engine found");
-            return;
-        }
-
-        // ✅ INCOMING — hook the EventEmitter directly
-        engine.on('data', function(rawData) {
+        // ✅ INCOMING — hook onmessage directly
+        const originalOnMessage = socket.onmessage;
+        socket.onmessage = function(event) {
             try {
-                if (!snifferRecording) return;
+                if (snifferRecording) {
+                    let decoded = event.data;
+                    if (typeof msgpack !== 'undefined' &&
+                        (event.data instanceof ArrayBuffer || event.data instanceof Uint8Array)) {
+                        decoded = msgpack.decode(new Uint8Array(event.data));
+                    }
+                    logPacket('IN', decoded);
 
-                let decoded = rawData;
-                if (typeof msgpack !== 'undefined' &&
-                    (rawData instanceof ArrayBuffer || rawData instanceof Uint8Array)) {
-                    decoded = msgpack.decode(new Uint8Array(rawData));
-                }
-
-                logPacket('IN', decoded);
-
-                // Player tracker — socket.io packets are typically [eventName, payload]
-                if (Array.isArray(decoded)) {
-                    const [cmd, subCmd, payload] = decoded;
-                    if (cmd === 'message') {
-                        if (subCmd === 'add_player' && payload?.user) {
-                            const pData = payload.user;
-                            if (!currentPlayers.some(p => p.id === pData.id)) {
-                                currentPlayers.push({
-                                    id: pData.id,
-                                    username: pData.username || pData.realUsername
-                                });
+                    // Player tracker
+                    if (Array.isArray(decoded)) {
+                        const [cmd, subCmd, payload] = decoded;
+                        if (cmd === 'message') {
+                            if (subCmd === 'add_player' && payload?.user) {
+                                const pData = payload.user;
+                                if (!currentPlayers.some(p => p.id === pData.id)) {
+                                    currentPlayers.push({
+                                        id: pData.id,
+                                        username: pData.username || pData.realUsername
+                                    });
+                                    updatePlayerListUI();
+                                }
+                            } else if (subCmd === 'remove_player' && payload) {
+                                const targetId = typeof payload === 'object' ? payload.id : payload;
+                                currentPlayers = currentPlayers.filter(p => p.id !== parseInt(targetId));
                                 updatePlayerListUI();
                             }
-                        } else if (subCmd === 'remove_player' && payload) {
-                            const targetId = typeof payload === 'object' ? payload.id : payload;
-                            currentPlayers = currentPlayers.filter(p => p.id !== parseInt(targetId));
-                            updatePlayerListUI();
                         }
                     }
                 }
             } catch(e) { _MM_Log("❌ IN hook error: " + e); }
-        });
 
-        // ✅ OUTGOING — hook transport.write at the right level
-        const transport = engine.transport;
-        if (transport && transport.write && !transport.write._hooked) {
-            const origWrite = transport.write.bind(transport);
-            transport.write = function(packets, callback) {
-                try {
-                    if (snifferRecording) {
-                        const pkts = Array.isArray(packets) ? packets : [packets];
-                        pkts.forEach(p => {
-                            let decoded = p.data;
-                            if (typeof msgpack !== 'undefined' &&
-                                (p.data instanceof ArrayBuffer || p.data instanceof Uint8Array)) {
-                                decoded = msgpack.decode(new Uint8Array(p.data));
-                            }
-                            if (p.type !== 'ping' && p.type !== 'pong') {
-                                logPacket('OUT', decoded ?? p);
-                            }
-                        });
-                    }
-                } catch(e) { _MM_Log("❌ OUT hook error: " + e); }
-                return origWrite(packets, callback);
-            };
-            transport.write._hooked = true;
-        }
+            if (originalOnMessage) originalOnMessage.apply(this, arguments);
+        };
 
-        // ✅ Terminal inject hook — sama kuin ennen, tää oli ok
-        if (unsafeWindow._MM_sendRaw && !unsafeWindow._MM_sendRaw.hooked) {
-            const originalSendRaw = unsafeWindow._MM_sendRaw;
-            unsafeWindow._MM_sendRaw = function(encodedPacket) {
-                try {
-                    if (snifferRecording && typeof msgpack !== 'undefined') {
-                        const decoded = msgpack.decode(encodedPacket);
-                        logPacket('OUT (TERMINAL)', decoded);
+        // ✅ OUTGOING — hook send()
+        const originalSend = socket.send.bind(socket);
+        socket.send = function(data) {
+            try {
+                if (snifferRecording) {
+                    let decoded = data;
+                    if (typeof msgpack !== 'undefined' &&
+                        (data instanceof ArrayBuffer || data instanceof Uint8Array)) {
+                        decoded = msgpack.decode(new Uint8Array(data));
                     }
-                } catch(e) {}
-                return originalSendRaw.apply(this, arguments);
-            };
-            unsafeWindow._MM_sendRaw.hooked = true;
-        }
+                    logPacket('OUT', decoded);
+                }
+            } catch(e) { _MM_Log("❌ OUT hook error: " + e); }
+            return originalSend(data);
+        };
     }
 
     setTimeout(hookSocketIncoming, 2000);
