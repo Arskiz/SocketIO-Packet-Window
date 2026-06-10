@@ -10,7 +10,7 @@
 
 (function () {
     'use strict';
-
+    
     // localstorage wrapper
     const Config = {
         get(key, defaultVal) {
@@ -929,7 +929,9 @@
         // cheat logic
         const parsedRoomsArray = [];
         const parsedItemsArray = [];
+        let lastRoom = 0;
 
+        
 
         function getPenguinProfile(pID) {
             _MM_Log(`📡 Requesting profile for ID: ${pID}... Tsekkaa snifferistä vastaus fr!`);
@@ -951,7 +953,17 @@
 
                 // 3. Define the recursive loop function
                 const loop = () => {
-                    const randomRoom = parsedRoomsArray[Math.floor(Math.random() * parsedRoomsArray.length)];
+                    let joinableRooms = parsedRoomsArray;
+
+                    // Filter out bugged room
+                    joinableRooms.filter(mf => mf.data1 !== "Staff");
+                    
+                    // Remove last room from array so that you dont join the same one
+                    joinableRooms.splice(lastRoom, 1);
+                    
+                    const randomRoom = joinableRooms[Math.floor(Math.random() * joinableRooms.length)];
+                    lastRoom = joinableRooms.findIndex(mf => mf.data1 === randomRoom.data1);
+
                     sendPacket('join_room', { room: parseInt(randomRoom.data2), x: 100, y: 100 });
                     
                     // Call itself again after 'ms' milliseconds
@@ -1123,8 +1135,6 @@
             });
         }
 
-        // Koukutetaan peli-socket ja kuunnellaan liikenne (sekä sisään että ulos)
-        // ☢️ NUCLEAR LEVEL SOCKET HOOK ☢️
         function hookSocketIncoming() {
             if (!unsafeWindow._MM_SOCKETS || unsafeWindow._MM_SOCKETS.length === 0) {
                 setTimeout(hookSocketIncoming, 1000);
@@ -1133,70 +1143,95 @@
 
             const socket = unsafeWindow._MM_SOCKETS[0];
             
-            if (socket && !socket.hooked) {
-                socket.hooked = true;
-                _MM_Log("🔥 [SNIFFER] SOCKET LÖYDETTY JA HOOKATTU FR FR 🔥");
+            if (socket && !socket.isFullyHooked) {
+                socket.isFullyHooked = true;
+                _MM_Log("🔥 [SNIFFER] INTERNAL ENGINE ROUTER RAWDOGGED FR FR 🔥");
 
-                // 1. KOUKUTETAAN ALIMMAN TASON INCOMING (onpacket)
-                if (socket.onpacket) {
-                    const originalOnPacket = socket.onpacket;
-                    socket.onpacket = function(packet) {
-                        try {
-                            if (snifferRecording) {
-                                console.log("📥 [RAW IN] Nappasi:", packet);
-                                logPacket('IN', packet);
-                            }
-                            
-                            // VANHA PLAYER TRACKER LOGIIKKA TÄHÄN JOTTA TOIMII
-                            const args = packet.data || [];
-                            const cmd = args[0], subCmd = args[1], payload = args[2]; 
-                            if (cmd === 'message') {
-                                if (subCmd === 'add_player' && payload && payload.user) {
-                                    const pData = payload.user;
-                                    if (!currentPlayers.some(p => p.id === pData.id)) {
-                                        currentPlayers.push({ id: pData.id, username: pData.username || pData.realUsername });
-                                        updatePlayerListUI();
+                // We go straight to the Engine.io core
+                if (socket.io && socket.io.engine) {
+                    const engine = socket.io.engine;
+
+                    // 📥 INCOMING TRAFFIC (Hijacks the raw packet receiver)
+                    if (engine.onPacket) {
+                        const originalOnPacket = engine.onPacket;
+                        engine.onPacket = function(packet) {
+                            try {
+                                if (snifferRecording) {
+                                    // packet.data contains the buffer if it's msgpack
+                                    let decoded = packet.data;
+                                    if (typeof msgpack !== 'undefined' && (packet.data instanceof ArrayBuffer || packet.data instanceof Uint8Array)) {
+                                        decoded = msgpack.decode(new Uint8Array(packet.data));
                                     }
-                                } else if (subCmd === 'remove_player' && payload) {
-                                    const targetId = typeof payload === 'object' ? payload.id : payload;
-                                    currentPlayers = currentPlayers.filter(p => p.id !== parseInt(targetId));
-                                    updatePlayerListUI();
+                                    
+                                    // Don't flood the UI with ping/pong keep-alive bullshit
+                                    if (packet.type !== 'ping' && packet.type !== 'pong') {
+                                        logPacket('IN', decoded || packet);
+                                    }
+
+                                    // FIX PLAYER TRACKER UI 
+                                    if (decoded && decoded.data) {
+                                        const args = decoded.data;
+                                        const cmd = args[0], subCmd = args[1], payload = args[2]; 
+                                        if (cmd === 'message') {
+                                            if (subCmd === 'add_player' && payload && payload.user) {
+                                                const pData = payload.user;
+                                                if (!currentPlayers.some(p => p.id === pData.id)) {
+                                                    currentPlayers.push({ id: pData.id, username: pData.username || pData.realUsername });
+                                                    updatePlayerListUI();
+                                                }
+                                            } else if (subCmd === 'remove_player' && payload) {
+                                                const targetId = typeof payload === 'object' ? payload.id : payload;
+                                                currentPlayers = currentPlayers.filter(p => p.id !== parseInt(targetId));
+                                                updatePlayerListUI();
+                                            }
+                                        }
+                                    }
                                 }
-                            }
-                        } catch (err) {
-                            console.error("💀 [SNIFFER IN] ERROR:", err);
-                        }
-                        return originalOnPacket.call(this, packet);
-                    };
+                            } catch(e) {}
+                            return originalOnPacket.apply(this, arguments);
+                        };
+                    }
+
+                    // 📤 OUTGOING TRAFFIC (Hijacks the literal send buffer)
+                    if (engine.write) {
+                        const originalWrite = engine.write;
+                        engine.write = function(packets) {
+                            try {
+                                if (snifferRecording) {
+                                    const pkts = Array.isArray(packets) ? packets : [packets];
+                                    pkts.forEach(p => {
+                                        let decoded = p.data;
+                                        if (typeof msgpack !== 'undefined' && (p.data instanceof ArrayBuffer || p.data instanceof Uint8Array)) {
+                                            decoded = msgpack.decode(new Uint8Array(p.data));
+                                        }
+                                        logPacket('OUT', decoded || p);
+                                    });
+                                }
+                            } catch(e) {}
+                            return originalWrite.apply(this, arguments);
+                        };
+                    }
                 }
 
-                // 2. KOUKUTETAAN ULOSMENEVÄ (sendRaw)
-                if (unsafeWindow._MM_sendRaw) {
+                // 💉 TERMINAL INJECT HOOK (Catches your custom hacks)
+                if (unsafeWindow._MM_sendRaw && !unsafeWindow._MM_sendRaw.hooked) {
                     const originalSendRaw = unsafeWindow._MM_sendRaw;
                     unsafeWindow._MM_sendRaw = function(encodedPacket) {
                         try {
-                            if (typeof msgpack !== 'undefined') {
+                            if (snifferRecording && typeof msgpack !== 'undefined') {
                                 const decoded = msgpack.decode(encodedPacket);
-                                if (snifferRecording) {
-                                    console.log("📤 [RAW OUT] Nappasi:", decoded);
-                                    logPacket('OUT', decoded);
-                                }
-                                
-                                if (decoded && decoded.data && decoded.data[1] === 'join_room') {
-                                    currentPlayers = [];
-                                    updatePlayerListUI();
-                                }
+                                logPacket('OUT (TERMINAL)', decoded);
                             }
-                        } catch(e) {
-                            console.error("💀 [SNIFFER OUT] ERROR:", e);
-                        }
+                        } catch(e) {}
                         return originalSendRaw.apply(this, arguments);
                     };
+                    unsafeWindow._MM_sendRaw.hooked = true; 
                 }
             }
+            
+            // Loop just in case it drops
             setTimeout(hookSocketIncoming, 2000); 
         }
-        hookSocketIncoming();
         buildSnifferUI();
 
         let antiAFKInterval = null;
