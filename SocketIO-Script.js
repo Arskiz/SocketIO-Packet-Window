@@ -11,7 +11,7 @@
 (function () {
     'use strict';
 
-    // --- CONFIG MANAGER (Persistent Storage) ---
+    // localstorage wrapper
     const Config = {
         get(key, defaultVal) {
             return GM_getValue(key, defaultVal);
@@ -21,6 +21,7 @@
         }
     };
 
+    // send raw packet to socket
     const sendPacket = (command, data = {}) => {
         if (!unsafeWindow._MM_SOCKETS || unsafeWindow._MM_SOCKETS.length === 0) return;
         const packet = {
@@ -33,6 +34,7 @@
         unsafeWindow._MM_sendRaw(encoded);
     };
 
+    // ui sounds
     const AudioFX = {
         ctx: null,
         init() {
@@ -79,6 +81,7 @@
         }
     };
 
+    // check if blizzard server
     function getServerString(serverUrl) {
         if (serverUrl && serverUrl.includes("blizzard")) {
             return "Blizzard";
@@ -87,6 +90,7 @@
         }
     }
 
+    // loop to check if we are connected to the game
     function runStatusCheckLoop() {
         const statusText = document.getElementById('mm-status');
         const statusDot = document.getElementById('mm-dot');
@@ -104,7 +108,7 @@
                 statusText.textContent = 'Connected - ' + getServerString(serverUrl);
                 statusDot.className = 'mm-status-dot connected';
 
-                // 🔓 Remove the lock class when connected!
+                // unlock ui
                 if (functionalPanel) functionalPanel.classList.remove('mm-menu-locked');
 
                 try {
@@ -125,10 +129,10 @@
                 statusText.className = 'mm-status-text disconnected';
                 statusText.textContent = 'Not connected';
                 statusDot.className = 'mm-status-dot disconnected';
-                
-                // 🔒 Force lock class when socket is dead or missing
+
+                // lock ui if offline
                 if (functionalPanel) functionalPanel.classList.add('mm-menu-locked');
-                
+
                 idDisplay.textContent = "0";
                 nickDisplay.textContent = "Not logged in.";
             }
@@ -150,7 +154,6 @@
                     --mm-text-mut: #888888;
                 }
                 
-                /* 🔒 FREEZE OVERLAY FOR DISCONNECTED USERS */
                 .mm-menu-locked {
                     pointer-events: none !important;
                     opacity: 0.35 !important;
@@ -380,7 +383,6 @@
                 }
                 .mm-toast.show { transform: translateX(0); opacity: 1; }
 
-                /* --- TIMER UI DRIP --- */
                 .mm-timer-wrap {
                     max-height: 0; opacity: 0; overflow: hidden;
                     transition: max-height 0.4s ease, opacity 0.4s ease, padding 0.4s ease;
@@ -399,6 +401,7 @@
                 }
             `;
 
+            // pop up notification function
             function showNotification(msg) {
                 let container = document.getElementById('mm-toast-box');
                 if (!container) {
@@ -420,6 +423,7 @@
                 }, 3500);
             }
 
+            // append css to head
             function inject() {
                 let s = document.getElementById('mm-style');
                 if (!s) {
@@ -430,11 +434,13 @@
                 s.textContent = style;
             }
 
+            // create main window
             function Window(title, opts = {}) {
                 inject();
                 const box = document.createElement('div');
                 box.className = 'mm-box';
 
+                // restore position if saved
                 const savedX = Config.get('menu_x', null);
                 const savedY = Config.get('menu_y', '20px');
                 box.style.cssText = `
@@ -487,10 +493,10 @@
                 header.appendChild(minBtn);
                 header.appendChild(closeBtn);
 
-                // Create inner panel and assign dynamic lock identifiers
+                // locked panel container
                 const inner = document.createElement('div');
                 inner.id = 'mm-functional-panel';
-                inner.className = 'mm-menu-locked'; // 🔒 Spawn locked by default on page load!
+                inner.className = 'mm-menu-locked'; 
 
                 const tabBar = document.createElement('div');
                 tabBar.className = 'mm-tabs';
@@ -518,6 +524,7 @@
                 box.appendChild(footer);
                 document.body.appendChild(box);
 
+                // drag logic
                 let drag = false;
                 let ox = 0, oy = 0;
                 let mouseX = 0, mouseY = 0;
@@ -558,6 +565,7 @@
 
                 let currentTilt = 0;
 
+                // physics engine for ui
                 function updatePhysicsLoop() {
                     let targetTilt = 0;
                     const boxRect = box.getBoundingClientRect();
@@ -601,6 +609,7 @@
                         }
                     }
 
+                    // bounds check
                     if (!minimised) {
                         const elasticity = 0.6;
                         if (currentX < 0) { currentX = 0; vx = -vx * elasticity; } 
@@ -619,6 +628,7 @@
 
                 requestAnimationFrame(updatePhysicsLoop);
                 
+                // emergency menu reset
                 document.addEventListener('keydown', (e) => {
                     if (document.activeElement && (
                         document.activeElement.tagName === 'INPUT' ||
@@ -712,6 +722,7 @@
                 return { addTab };
             }
 
+            // ui element builders
             function Tab(container) {
                 function section(title, subtitle, pic=null) {
                     const sec = document.createElement('div');
@@ -729,7 +740,6 @@
                     btn.className = `mm-btn-el${color ? ' ' + color : ''}`;
                     btn.textContent = label;
                     
-                    // 🔊 Unified trigger audio directly inside button logic!
                     btn.onclick = (e) => {
                         if (typeof AudioFX !== 'undefined' && AudioFX.playClick) AudioFX.playClick();
                         if (onClick) onClick(e);
@@ -807,7 +817,6 @@
                     const menu = document.createElement('div');
                     menu.className = 'mm-dropdown-menu';
 
-                    // Spawn the hidden timer box right below the menu
                     const timerWrap = document.createElement('div');
                     timerWrap.className = 'mm-timer-wrap';
                     timerWrap.innerHTML = `<span class="mm-timer-text">WAITING...</span>`;
@@ -845,7 +854,6 @@
                             e.stopPropagation();
                             if (typeof AudioFX !== 'undefined' && AudioFX.playClick) AudioFX.playClick();
                             if (typeof onSelect === 'function') {
-                                // WE PASS THE TIMER WRAP OVER TO THE CALLBACK NOW 🔥
                                 onSelect(itemData.data1, itemData.data2, timerWrap); 
                             }
                             menu.classList.remove('open');
@@ -857,7 +865,7 @@
 
                     container.appendChild(trigger);
                     container.appendChild(menu);
-                    container.appendChild(timerWrap); // Attach it to the bottom
+                    container.appendChild(timerWrap);
                     sec.appendChild(container);
 
                     return { button, checkbox, input, dropdown };
@@ -869,11 +877,8 @@
             return { Window, updateStyle: inject };
         })();
 
-        //////////////////////
-        // CHEATS
-        //////////////////////
-
-        // --- Anti AFK KICK ---
+        // cheat logic
+        
         let antiAFKInterval = null;
         function initiateAntiAFKKick(state) {
             if (state) {
@@ -881,7 +886,7 @@
                     antiAFKInterval = setInterval(() => {
                         sendPacket('stamp_earned', {id: 9999}); 
                         unsafeWindow._MM_Log("[ModMenu] Invisible Anti-AFK Heartbeat packet dispatched.");
-                    }, 300000); // Trigger every 2 minutes
+                    }, 300000); // 2 min timer
                 }
             } else {
                 if (antiAFKInterval) {
@@ -891,20 +896,19 @@
             }
         }
 
-        // --- Economy ---
+        // money printer
         function sendCoinHack(coinAmount, delayMs, timerWrap) {
-            // Instantly warp to room
+            // tp to town first
             sendPacket('join_room', { room: 901, x: 100, y: 100 });
             
             if (timerWrap) {
-                // Drop down the UI
                 timerWrap.classList.add('active');
                 const textEl = timerWrap.querySelector('.mm-timer-text');
-                textEl.style.color = '#ffcc00'; // Reset color to yellow
+                textEl.style.color = '#ffcc00'; 
                 
                 let timeLeft = delayMs;
 
-                // Big brain math to format MS into MM:SS
+                // calc ms to min:sec
                 const formatTime = (ms) => {
                     let totalSec = Math.floor(ms / 1000);
                     let m = Math.floor(totalSec / 60);
@@ -914,47 +918,34 @@
                 
                 textEl.textContent = `WAIT: ${formatTime(timeLeft)}`;
                 
-                // Start ticking down
                 const interval = setInterval(() => {
                     timeLeft -= 1000;
                     
                     if (timeLeft <= 0) {
                         clearInterval(interval);
                         
-                        // Fire the bag packet
                         sendPacket('game_over', { coins: coinAmount });
                         
-                        // Update UI to show we secured it
-                        textEl.style.color = "var(--mm-theme)"; // Make it green
+                        textEl.style.color = "var(--mm-theme)";
                         textEl.textContent = "Coins generated. Press X Ingame to collect.";
-                        //showNotification(`Secured ${coinAmount} coins! Click X in game.`);
                         
-                        // Hide the timer back up into the dropdown after 3.5 seconds
                         setTimeout(() => {
                             timerWrap.classList.remove('active');
                         }, 3500);
                         
                     } else {
-                        // Keep updating the text
                         textEl.textContent = `WAIT: ${formatTime(timeLeft)}`;
                     }
                 }, 1000);
             }
         }
 
-        
-
-        ///////////////////////////////
-        // MAIN TERMINAL UI
-        ///////////////////////////////
-
-        // --- RENDER CHEAT TERMINAL INTERFACE ---
+        // init main ui window
         const win = ModMenu.Window("CPL Terminal by Arskiz", { x: 'right', y: '20px', width: '340px' });
 
-        // --- GENERAL TAB ---
         const general = win.addTab("General");
 
-        // init coinoptions
+        // coin logic array
         const coinOptions = []
         for(let i = 1; i< 100; i++){
             coinOptions.push({ data1: i * 50, data2: 2000 * i});
@@ -969,14 +960,11 @@
                 sendCoinHack(data1, data2, timerUI);
             });
 
-        // --- ROOMS TAB ---
         const roomsSection = win.addTab("Rooms").section("Room Stuff", "Room joiner, etc");
         const loadingTrigger = roomsSection.button("🔄 Syncing Live Map Database...", "yellow");
 
-        // --- INVENTORY TAB ---
         const inventory = win.addTab("Inventory").section("Inventory Stuff", "Inventory adder, etc");
 
-        // --- SETTINGS TAB ---
         const misc = win.addTab("Settings");
         misc.section("Customization", "Make it look different")
             .input("Theme Color", "theme_color", "#bf0000", "", val => {
@@ -998,7 +986,7 @@
                 alert("Refresh the page to reset window position!");
             });
 
-        // --- CRUMBS ASYNC DATA FETCH ---
+        // fetch game data from api
         const crumbsUrl = "https://media.cplegacy.com/crumbs/en/crumbs.json?v=" + Date.now();
         GM_xmlhttpRequest({
             method: "GET",
@@ -1029,7 +1017,6 @@
                             }
                         }
 
-                        // Remove loading prompt
                         const btnEl = document.querySelector('.mm-btn-el.yellow');
                         if (btnEl) btnEl.remove();
 
@@ -1050,11 +1037,9 @@
         });
     }
 
-    // --- MAIN INITIALIZATION SYSTEM ---
-    // Start our live status observer right away
+    // start loops on load
     runStatusCheckLoop();
 
-    // Spawn the UI single container once on body availability
     if (document.body) initMenu();
     else document.addEventListener('DOMContentLoaded', initMenu);
 
