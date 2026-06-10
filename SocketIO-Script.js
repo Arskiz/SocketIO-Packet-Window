@@ -6,7 +6,7 @@
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @run-at       document-start
-// @require      https://cdn.jsdelivr.net/npm/@msgpack/msgpack@3/dist.es5+umd/msgpack.min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/msgpack-lite/0.1.26/msgpack.min.js
 // ==/UserScript==
 
 (function () {
