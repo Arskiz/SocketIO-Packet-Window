@@ -1142,63 +1142,49 @@
     }
 
     const socket = unsafeWindow._MM_SOCKETS[0];
-
     if (socket && !socket.isFullyHooked) {
         socket.isFullyHooked = true;
-        _MM_Log("🔥 [SNIFFER] RAW WEBSOCKET HOOKED FR FR 🔥");
+        _MM_Log("🔥 [SNIFFER] HOOKED");
 
-        // ✅ INCOMING — hook onmessage directly
-        const originalOnMessage = socket.onmessage;
-        socket.onmessage = function(event) {
+        // INCOMING
+        socket.addEventListener('message', function(e) {
             try {
-                if (snifferRecording) {
-                    let decoded = event.data;
-                    if (typeof msgpack !== 'undefined' &&
-                        (event.data instanceof ArrayBuffer || event.data instanceof Uint8Array)) {
-                        decoded = msgpack.decode(new Uint8Array(event.data));
-                    }
-                    logPacket('IN', decoded);
+                if (!snifferRecording) return;
+                if (!(e.data instanceof ArrayBuffer)) return;
 
-                    // Player tracker
-                    if (Array.isArray(decoded)) {
-                        const [cmd, subCmd, payload] = decoded;
-                        if (cmd === 'message') {
-                            if (subCmd === 'add_player' && payload?.user) {
-                                const pData = payload.user;
-                                if (!currentPlayers.some(p => p.id === pData.id)) {
-                                    currentPlayers.push({
-                                        id: pData.id,
-                                        username: pData.username || pData.realUsername
-                                    });
-                                    updatePlayerListUI();
-                                }
-                            } else if (subCmd === 'remove_player' && payload) {
-                                const targetId = typeof payload === 'object' ? payload.id : payload;
-                                currentPlayers = currentPlayers.filter(p => p.id !== parseInt(targetId));
+                const decoded = msgpack.decode(new Uint8Array(e.data));
+                logPacket('IN', decoded);
+
+                // Player tracker
+                if (decoded?.data && Array.isArray(decoded.data)) {
+                    const [cmd, subCmd, payload] = decoded.data;
+                    if (cmd === 'message') {
+                        if (subCmd === 'add_player' && payload?.user) {
+                            const pData = payload.user;
+                            if (!currentPlayers.some(p => p.id === pData.id)) {
+                                currentPlayers.push({ id: pData.id, username: pData.username || pData.realUsername });
                                 updatePlayerListUI();
                             }
+                        } else if (subCmd === 'remove_player' && payload) {
+                            const targetId = typeof payload === 'object' ? payload.id : payload;
+                            currentPlayers = currentPlayers.filter(p => p.id !== parseInt(targetId));
+                            updatePlayerListUI();
                         }
                     }
                 }
-            } catch(e) { _MM_Log("❌ IN hook error: " + e); }
+            } catch(e) { _MM_Log("❌ " + e); }
+        });
 
-            if (originalOnMessage) originalOnMessage.apply(this, arguments);
-        };
-
-        // ✅ OUTGOING — hook send()
-        const originalSend = socket.send.bind(socket);
+        // OUTGOING
+        const origSend = socket.send.bind(socket);
         socket.send = function(data) {
             try {
-                if (snifferRecording) {
-                    let decoded = data;
-                    if (typeof msgpack !== 'undefined' &&
-                        (data instanceof ArrayBuffer || data instanceof Uint8Array)) {
-                        decoded = msgpack.decode(new Uint8Array(data));
-                    }
+                if (snifferRecording && data instanceof ArrayBuffer) {
+                    const decoded = msgpack.decode(new Uint8Array(data));
                     logPacket('OUT', decoded);
                 }
-            } catch(e) { _MM_Log("❌ OUT hook error: " + e); }
-            return originalSend(data);
+            } catch(e) {}
+            return origSend(data);
         };
     }
 
