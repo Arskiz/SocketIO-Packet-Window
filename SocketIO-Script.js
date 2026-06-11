@@ -1147,15 +1147,30 @@
         socket.isFullyHooked = true;
         _MM_Log("🔥 [SNIFFER] HOOKED");
 
-        // INCOMING
-        socket.addEventListener('message', function(e) {
-            try {
-                if (!snifferRecording) return;
-                if (!(e.data instanceof ArrayBuffer)) return;
+        // OUTGOING - hookaa _MM_sendRaw suoraan, ei socket.send
+const original_MM_sendRaw = unsafeWindow._MM_sendRaw;
+unsafeWindow._MM_sendRaw = function(bytes) {
+    try {
+        if (snifferRecording) {
+            const decoded = msgpack.decode(bytes);
+            logPacket('OUT', decoded);
+        }
+    } catch(e) { _MM_Log("❌ OUT: " + e); }
+    return original_MM_sendRaw(bytes);
+};
 
-                const decoded = unsafeWindow.msgpack.decode(new Uint8Array(e.data));
-                logPacket('IN', decoded);
-
+// INCOMING - hookaa suoraan WebSocket prototyyppi
+const originalWSAddEventListener = _NativeWS.prototype.addEventListener;
+unsafeWindow._MM_SOCKETS.forEach(socket => {
+    socket.addEventListener('message', function(e) {
+        try {
+            if (!snifferRecording) return;
+            if (!(e.data instanceof ArrayBuffer)) return;
+            const decoded = msgpack.decode(new Uint8Array(e.data));
+            logPacket('IN', decoded);
+        } catch(e) { _MM_Log("❌ IN: " + e); }
+    });
+});
                 // Player tracker
                 if (decoded?.data && Array.isArray(decoded.data)) {
                     const [cmd, subCmd, payload] = decoded.data;
