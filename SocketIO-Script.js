@@ -12,6 +12,18 @@
 (function () {
     'use strict';
     
+    const _watchPhaser = setInterval(() => {
+    if (typeof Phaser === 'undefined') return;
+    clearInterval(_watchPhaser);
+    
+    const _orig = Phaser.Game;
+    Phaser.Game = function(...args) {
+        const g = new _orig(...args);
+        window._MM_Game = g;
+        return g;
+    };
+}, 10);
+    
     // localstorage wrapper
     const Config = {
         get(key, defaultVal) {
