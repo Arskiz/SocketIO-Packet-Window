@@ -1142,7 +1142,7 @@
         return;
     }
 
-    // OUTGOING - hookaa _MM_sendRaw
+    // OUTGOING
     const original_MM_sendRaw = unsafeWindow._MM_sendRaw;
     unsafeWindow._MM_sendRaw = function(bytes) {
         try {
@@ -1154,11 +1154,10 @@
         return original_MM_sendRaw(bytes);
     };
 
-    // INCOMING - hookaa jokainen socket
+    // INCOMING
     unsafeWindow._MM_SOCKETS.forEach(socket => {
         if (socket.isFullyHooked) return;
         socket.isFullyHooked = true;
-
         socket.addEventListener('message', function(e) {
             try {
                 if (!snifferRecording) return;
