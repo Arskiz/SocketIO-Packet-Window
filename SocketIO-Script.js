@@ -1136,7 +1136,7 @@
             });
         }
 
-        function hookSocketIncoming() {
+       function hookSocketIncoming() {
     if (!unsafeWindow._MM_SOCKETS || unsafeWindow._MM_SOCKETS.length === 0) {
         setTimeout(hookSocketIncoming, 1000);
         return;
