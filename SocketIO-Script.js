@@ -1142,35 +1142,30 @@
         return;
     }
 
-    const socket = unsafeWindow._MM_SOCKETS[0];
-    if (socket && !socket.isFullyHooked) {
-        socket.isFullyHooked = true;
-        _MM_Log("🔥 [SNIFFER] HOOKED");
-
-        // OUTGOING - hookaa _MM_sendRaw suoraan, ei socket.send
-const original_MM_sendRaw = unsafeWindow._MM_sendRaw;
-unsafeWindow._MM_sendRaw = function(bytes) {
-    try {
-        if (snifferRecording) {
-            const decoded = msgpack.decode(bytes);
-            logPacket('OUT', decoded);
-        }
-    } catch(e) { _MM_Log("❌ OUT: " + e); }
-    return original_MM_sendRaw(bytes);
-};
-
-// INCOMING - hookaa suoraan WebSocket prototyyppi
-const originalWSAddEventListener = _NativeWS.prototype.addEventListener;
-unsafeWindow._MM_SOCKETS.forEach(socket => {
-    socket.addEventListener('message', function(e) {
+    // OUTGOING - hookaa _MM_sendRaw
+    const original_MM_sendRaw = unsafeWindow._MM_sendRaw;
+    unsafeWindow._MM_sendRaw = function(bytes) {
         try {
-            if (!snifferRecording) return;
-            if (!(e.data instanceof ArrayBuffer)) return;
-            const decoded = msgpack.decode(new Uint8Array(e.data));
-            logPacket('IN', decoded);
-        } catch(e) { _MM_Log("❌ IN: " + e); }
-    });
-});
+            if (snifferRecording) {
+                const decoded = msgpack.decode(bytes);
+                logPacket('OUT', decoded);
+            }
+        } catch(e) { _MM_Log("❌ OUT: " + e); }
+        return original_MM_sendRaw(bytes);
+    };
+
+    // INCOMING - hookaa jokainen socket
+    unsafeWindow._MM_SOCKETS.forEach(socket => {
+        if (socket.isFullyHooked) return;
+        socket.isFullyHooked = true;
+
+        socket.addEventListener('message', function(e) {
+            try {
+                if (!snifferRecording) return;
+                if (!(e.data instanceof ArrayBuffer)) return;
+                const decoded = msgpack.decode(new Uint8Array(e.data));
+                logPacket('IN', decoded);
+
                 // Player tracker
                 if (decoded?.data && Array.isArray(decoded.data)) {
                     const [cmd, subCmd, payload] = decoded.data;
@@ -1188,22 +1183,11 @@ unsafeWindow._MM_SOCKETS.forEach(socket => {
                         }
                     }
                 }
-            } catch(e) { _MM_Log("❌ " + e); }
+            } catch(e) { _MM_Log("❌ IN: " + e); }
         });
+    });
 
-        // OUTGOING
-        const origSend = socket.send.bind(socket);
-        socket.send = function(data) {
-            try {
-                if (snifferRecording && data instanceof ArrayBuffer) {
-                    const decoded = unsafeWindow.msgpack.decode(new Uint8Array(data));
-                    logPacket('OUT', decoded);
-                }
-            } catch(e) {}
-            return origSend(data);
-        };
-    }
-
+    _MM_Log("🔥 [SNIFFER] HOOKED");
     setTimeout(hookSocketIncoming, 2000);
 }
         buildSnifferUI();
